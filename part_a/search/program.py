@@ -5,6 +5,30 @@ from .core import CellState, Coord, Direction, Action, MoveAction, EatAction, Ca
 from .utils import render_board
 
 
+class Node:
+    def __init__(self, state: dict[Coord, CellState], parent: Node, children: list[Node], path: Action):
+        self.state = state
+        self.parent = parent
+        self.children = children
+        self.path = path
+
+def create_root(init_state: dict[Coord, CellState]) -> Node:
+    return Node(init_state, None, [], None)
+
+def goal_test(board_state: dict) -> bool:
+    pass
+
+def apply_action(action, node) -> Node:
+    pass
+
+def is_valid_move(action, node) -> bool:
+    # All types of moves
+    pass
+
+def get_path(goal: Node) -> list[Action]:
+    pass
+
+
 def search(
     board: dict[Coord, CellState]
 ) -> list[Action] | None:
