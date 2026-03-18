@@ -1,7 +1,7 @@
 # COMP30024 Artificial Intelligence, Semester 1 2026
 # Project Part A: Single Player Cascade
 
-from .core import CellState, Coord, Direction, Action, MoveAction, EatAction, CascadeAction
+from .core import CellState, Coord, Direction, Action, MoveAction, EatAction, CascadeAction, PlayerColor
 from .utils import render_board
 
 
@@ -16,7 +16,10 @@ def create_root(init_state: dict[Coord, CellState]) -> Node:
     return Node(init_state, None, [], None)
 
 def goal_test(board_state: dict) -> bool:
-    pass
+    for cell in dict.values:
+        if cell.color == PlayerColor.BLUE:
+            return False
+    return True
 
 def apply_action(action, node) -> Node:
     pass
