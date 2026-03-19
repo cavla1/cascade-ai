@@ -18,13 +18,21 @@ def create_root(init_state: dict[Coord, CellState]) -> Node:
     return Node(init_state, None, [], None)
 
 def goal_test(board_state: dict) -> bool:
-    for cell in dict.values:
+    for cell in board_state.values():
         if cell.color == PlayerColor.BLUE:
             return False
     return True
 
 def apply_action(action, node) -> Node:
     pass
+
+def is_valid(action, node) -> bool:
+    if isinstance(action, MoveAction):
+        return is_valid_move(action, node)
+    elif isinstance(action, EatAction):
+        return is_valid_eat(action, node)
+    elif isinstance(action, CascadeAction):
+        return is_valid_cascade(action,node)
 
 def is_valid_move(action, node) -> bool:
     if action.direction == Direction.Down:
@@ -73,13 +81,13 @@ def is_valid_eat(action, node) -> bool:
         if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord):
             return False
     if action.direction == Direction.Left:
-        if node.state.get(action.coord.add(Direction.Left)) not in node.state:
+        if node.state.get(action.coord + Direction.Left) not in node.state:
             return False
         move_to_cellstate = node.state.get(action.coord.add(Direction.Left))
         if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord):
             return False
     if action.direction == Direction.Right:
-        if node.state.get(action.coord.add(Direction.Right)) not in node.state:
+        if node.state.get(action.coord + Direction.Right) not in node.state:
             return False
         move_to_cellstate = node.state.get(action.coord.add(Direction.Right))
         if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord):
@@ -96,6 +104,20 @@ def is_valid_cascade(action, node):
 
 def get_path(goal: Node) -> list[Action]:
     pass
+
+def generate_possible_actions(node) -> list[Action]:
+    actions = []
+    for coord in node.state.keys():
+        if node.state[coord].color == PlayerColor.RED and node.state[coord].height > 0:
+            for direction in Direction:
+                if is_valid_move(MoveAction(coord, direction), node):
+                    actions.append(MoveAction(coord,direction))
+                if is_valid_eat(EatAction(coord, direction), node):
+                    actions.append(EatAction(coord,direction))
+                if is_valid_move(CascadeAction(coord, direction), node):
+                    actions.append(CascadeAction(coord,direction))
+    return actions
+
 
 
 def search(
@@ -125,9 +147,22 @@ def search(
     # ...
     # ... (your solution goes here!)
     # ...
-    root = create_root(board)
-    print(is_valid_move(MoveAction(Coord(3, 3), Direction.Down), root))
-    print(is_valid_eat(EatAction(Coord(4, 3), Direction.Down), root))
+    queue = [create_root(board)]
+
+    while True: 
+        if queue == []:
+        # no more possible states
+            return None
+        # expand next node in queue
+        next_node = queue.pop(0)
+        if goal_test(next_node.state):
+            return next_node
+        # create a new node for each valid action applied to next_node
+        for action in generate_possible_actions(next_node):
+            new_node = apply_action(action, next_node)
+            # check if action is valid from current state
+            next_node.children.append(new_node)
+            queue = queue + [new_node]
 
     # Here we're returning "hardcoded" actions as an example of the expected
     # output format. Of course, you should instead return the result of your
