@@ -2,20 +2,22 @@
 # Project Part A: Single Player Cascade
 
 from __future__ import annotations
-from .core import CellState, Coord, Direction, Action, MoveAction, EatAction, CascadeAction, PlayerColor
+from .core import CellState, Coord, Direction, Action, MoveAction, EatAction, CascadeAction, PlayerColor, BOARD_N
 from .utils import render_board
+from copy import copy
 
 
 
 class Node:
-    def __init__(self, state: dict[Coord, CellState], parent: Node, children: list[Node], path: Action):
+    def __init__(self, state: dict[Coord, CellState], parent: Node, children: list[Node], action: Action):
         self.state = state
         self.parent = parent
         self.children = children
-        self.path = path
+        self.action = action # renamed path to action, thought it was more clear
+        # might need a score
 
 def create_root(init_state: dict[Coord, CellState]) -> Node:
-    return Node(init_state, None, [], None)
+    return Node(init_state, parent=None, children=[], action=None)
 
 def goal_test(board_state: dict) -> bool:
     for cell in board_state.values():
@@ -24,7 +26,56 @@ def goal_test(board_state: dict) -> bool:
     return True
 
 def apply_action(action, node) -> Node:
-    pass
+    if isinstance(action, MoveAction):
+        return apply_move(action, node)
+    if isinstance(action, EatAction):
+        return apply_eat(action, node)
+    if isinstance(action, CascadeAction):
+        return apply_cascade(action, node)
+    return Node                       #Not sure if this is necessary just a base case type thing for empty action
+
+def apply_move(action: MoveAction, node: Node) -> Node:
+    new_state = copy(node.state)    # not sure if need to copy/deepcopy
+    curr_cell = new_state.pop(action.coord)
+    new_state[action.coord+action.direction] = curr_cell
+    new_node = Node(new_state, node, [], action)
+    node.children.append(new_node)
+    return new_node
+
+def apply_eat(action: EatAction, node: Node) -> Node:
+    new_state = copy(node.state)    # not sure if need to copy/deepcopy
+    curr_cell = new_state.pop(action.coord)
+    new_state[action.coord+action.direction] = curr_cell
+    new_node = Node(new_state, node, [], action)
+    node.children.append(new_node)
+    return new_node
+
+def apply_cascade(action: CascadeAction, node: Node) -> Node:
+    new_state = copy(node.state)    # not sure if need to copy/deepcopy
+    curr_cell = new_state.pop(action.coord)
+    shift = curr_cell.height
+
+    line = []   # list of relevant coords to be shifted
+    r = action.coord.r
+    c = action.coord.c
+    dr = action.direction.r
+    dc = action.direction.c
+    while 0 <= r+dr < BOARD_N and 0 <= c+dc < BOARD_N-1:
+        r += dr
+        c += dc
+        line.append(Coord(r, c))
+        
+    #for i, coord in list(enumerate(list, start=0))[::-1]
+    for i in range(len(line)-1, -1, -1):
+        # Within range of cascade
+        if i < shift:
+            new_state[line[i]] = CellState(PlayerColor.RED, 1)
+        # if something will be pushed to coord
+        elif line[i-shift] in node.state:
+            new_state[line[i]] = node.state[line[i-shift]]
+        # if something needs to be removed
+        elif line[i] in node.state:
+            del new_state[line[i]]
 
 def is_valid(action, node) -> bool:
     if isinstance(action, MoveAction):
@@ -97,13 +148,15 @@ def is_valid_eat(action, node) -> bool:
 def is_valid_cascade(action, node):
     if node.state.get(action.coord).height >= 2:
         return True
-    return False
-
-    
-        
+    return False      
 
 def get_path(goal: Node) -> list[Action]:
-    pass
+    curr = goal
+    path = []
+    while curr.parent:
+        path.append(curr.action)
+        curr = curr.parent
+    return path[::-1]
 
 def generate_possible_actions(node) -> list[Action]:
     actions = []
