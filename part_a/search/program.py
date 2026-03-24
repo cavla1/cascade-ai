@@ -5,6 +5,7 @@ from __future__ import annotations
 from .core import CellState, Coord, Direction, Action, MoveAction, EatAction, CascadeAction, PlayerColor, BOARD_N
 from .utils import render_board
 from copy import copy
+import heapq
 
 
 
@@ -263,3 +264,29 @@ def search(
         MoveAction(Coord(3, 3), Direction.Down),
         EatAction(Coord(4, 3), Direction.Down),
     ]
+
+
+def search_astar(board: dict[Coord, CellState]
+) -> list[Action] | None:
+    
+    heap = []
+    counter = 0
+    heapq.heappush(heap, (0,counter,create_root(board)))
+    counter = counter + 1
+
+    while True: 
+        if heap == []:
+        # no more possible states
+            return None
+        # expand next node in queue
+        next_node = heapq.heappop(heap)
+        if goal_test(next_node.state):
+            return get_path(next_node)
+        # create a new node for each valid action applied to next_node
+        for action in generate_possible_actions(next_node):
+            new_node = apply_action(action, next_node)
+            # check if action is valid from current state
+            next_node.children.append(new_node)
+            
+            heap.heappush(heap, ())
+
