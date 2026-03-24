@@ -10,15 +10,16 @@ import heapq
 
 
 class Node:
-    def __init__(self, state: dict[Coord, CellState], parent: Node, children: list[Node], action: Action):
+    def __init__(self, state: dict[Coord, CellState], parent: Node, children: list[Node], action: Action, depth: int):
         self.state = state
         self.parent = parent
         self.children = children
         self.action = action # renamed path to action, thought it was more clear
+        self.depth = depth # added depth so that we dont have to compute the complete path every time
         #maybe add score and nstacks and stack height
 
 def create_root(init_state: dict[Coord, CellState]) -> Node:
-    return Node(init_state, parent=None, children=[], action=None)
+    return Node(init_state, parent=None, children=[], action=None, depth = 0)
 
 def goal_test(board_state: dict) -> bool:
     for cell in board_state.values():
@@ -47,7 +48,7 @@ def apply_move(action: MoveAction, node: Node) -> Node:
     else:
         new_state[target] = CellState(PlayerColor.RED, src_cell.height)
 
-    new_node = Node(new_state, node, [], action)
+    new_node = Node(new_state, node, [], action, node.depth + 1)
     node.children.append(new_node)
     return new_node
 
@@ -55,7 +56,7 @@ def apply_eat(action: EatAction, node: Node) -> Node:
     new_state = copy(node.state)    # not sure if need to copy/deepcopy
     curr_cell = new_state.pop(action.coord)
     new_state[action.coord+action.direction] = curr_cell
-    new_node = Node(new_state, node, [], action)
+    new_node = Node(new_state, node, [], action, Node.depth + 1)
     node.children.append(new_node)
     return new_node
 
@@ -94,7 +95,7 @@ def apply_cascade(action: CascadeAction, node: Node) -> Node:
         elif cell == 1:
             new_state[coord] = CellState(PlayerColor.RED, 1)
 
-    return Node(state=new_state, parent=node, children=[], action=action)
+    return Node(state=new_state, parent=node, children=[], action=action, depth = Node.depth + 1)
 
 def is_valid(action, node) -> bool:
     if isinstance(action, MoveAction):
@@ -265,12 +266,17 @@ def search(
         EatAction(Coord(4, 3), Direction.Down),
     ]
 
+def heuristic(node: Node) -> float:
+    cost_so_far = node.depth
+    estimated_cost = 1
+    return cost_so_far + estimated_cost
+
 
 def search_astar(board: dict[Coord, CellState]
 ) -> list[Action] | None:
     
     heap = []
-    counter = 0
+    counter = 0         # counter for tiebreak
     heapq.heappush(heap, (0,counter,create_root(board)))
     counter = counter + 1
 
@@ -285,8 +291,9 @@ def search_astar(board: dict[Coord, CellState]
         # create a new node for each valid action applied to next_node
         for action in generate_possible_actions(next_node):
             new_node = apply_action(action, next_node)
-            # check if action is valid from current state
             next_node.children.append(new_node)
-            
-            heap.heappush(heap, ())
+            priority = heuristic(new_node)
+            heap.heappush(heap, (priority, counter, new_node))
+            counter = counter + 1
+
 
