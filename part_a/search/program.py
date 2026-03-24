@@ -39,7 +39,7 @@ def apply_move(action: MoveAction, node: Node) -> Node:
 
     new_state = copy(node.state)    # not sure if need to copy/deepcopy
     src_cell = new_state.pop(action.coord)
-    target_cell = new_state.get[target]
+    target_cell = new_state.get(target)
 
     if target_cell:
         new_state[target] = CellState(PlayerColor.RED, target_cell.height + src_cell.height)
@@ -48,7 +48,7 @@ def apply_move(action: MoveAction, node: Node) -> Node:
 
     new_node = Node(new_state, node, [], action)
     node.children.append(new_node)
-    return new_node ## change
+    return new_node
 
 def apply_eat(action: EatAction, node: Node) -> Node:
     new_state = copy(node.state)    # not sure if need to copy/deepcopy
