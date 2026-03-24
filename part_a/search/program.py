@@ -234,15 +234,15 @@ def search(
         # expand next node in queue
         next_node = queue.pop(0)
         if goal_test(next_node.state):
-            return next_node
+            return get_path(next_node)
         # create a new node for each valid action applied to next_node
         for action in generate_possible_actions(next_node):
             new_node = apply_action(action, next_node)
             # check if action is valid from current state
             next_node.children.append(new_node)
             queue = queue + [new_node]
-            print("For action ", action, " we get:")
-            print(render_board(new_node.state, ansi=True))
+            # print("For action ", action, " we get:")
+            # print(render_board(new_node.state, ansi=True))
 
     # Here we're returning "hardcoded" actions as an example of the expected
     # output format. Of course, you should instead return the result of your
