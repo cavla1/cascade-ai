@@ -234,20 +234,23 @@ def search(
     # ... (your solution goes here!)
     # ...
     queue = [create_root(board)]
-
+    visited = []
     while True: 
         if queue == []:
         # no more possible states
             return None
         # expand next node in queue
         next_node = queue.pop(0)
+        if next_node.state in visited:
+            continue
+        visited.append(next_node.state)
         if goal_test(next_node.state):
             return get_path(next_node)
         # create a new node for each valid action applied to next_node
         for action in generate_possible_actions(next_node):
             new_node = apply_action(action, next_node)
             # check if action is valid from current state
-            next_node.children.append(new_node)
+            next_node.children.append(new_node) # double counted in apply_ functions
             queue = queue + [new_node]
             # print("For action ", action, " we get:")
             # print(render_board(new_node.state, ansi=True))
