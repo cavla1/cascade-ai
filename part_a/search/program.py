@@ -89,59 +89,73 @@ def is_valid_move(action, node) -> bool:
     if action.direction == Direction.Down:
         if action.coord.r >= 7:
             return False
-        if node.state.get(action.coord + Direction.Down) in node.state:
+        if (action.coord + Direction.Down) in node.state:
             move_to_cellstate = node.state.get(action.coord + Direction.Down)
             if move_to_cellstate.color == PlayerColor.BLUE:
                 return False
     elif action.direction == Direction.Up:
         if action.coord.r <= 0:
             return False
-        if node.state.get(action.coord + Direction.Up) in node.state:
+        if (action.coord + Direction.Up) in node.state:
             move_to_cellstate = node.state.get(action.coord + Direction.Up)
             if move_to_cellstate.color == PlayerColor.BLUE:
                 return False
     elif action.direction == Direction.Left:
         if action.coord.c <= 0:
             return False
-        if node.state.get(action.coord + Direction.Left) in node.state:
+        if (action.coord + Direction.Left) in node.state:
             move_to_cellstate = node.state.get(action.coord + Direction.Left)
             if move_to_cellstate.color == PlayerColor.BLUE:
                 return False
     if action.direction == Direction.Right:
         if action.coord.c >= 7:
             return False
-        if node.state.get(action.coord + Direction.Right) in node.state:
+        if (action.coord + Direction.Right) in node.state:
             move_to_cellstate = node.state.get(action.coord + Direction.Right)
             if move_to_cellstate.color == PlayerColor.BLUE:
                 return False
     return True
 
 def is_valid_eat(action, node) -> bool: 
-    if is_valid_move(MoveAction(action.coord, action.direction), node) is False:
-        return False
     if action.direction == Direction.Down:
-        if node.state.get(action.coord + Direction.Down) not in node.state:
+        if action.coord.r >= 7:
+            return False
+        if (action.coord + Direction.Down) not in node.state:
             return False
         move_to_cellstate = node.state.get(action.coord + Direction.Down)
-        if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord):
+        if move_to_cellstate.color == PlayerColor.RED:
+            return False
+        if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord).height:
             return False
     if action.direction == Direction.Up:
-        if node.state.get(action.coord + Direction.Up) not in node.state:
+        if action.coord.r <= 0:
+            return False
+        if (action.coord + Direction.Up) not in node.state:
             return False
         move_to_cellstate = node.state.get(action.coord + Direction.Up)
-        if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord):
+        if move_to_cellstate.color == PlayerColor.RED:
+            return False
+        if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord).height:
             return False
     if action.direction == Direction.Left:
-        if node.state.get(action.coord + Direction.Left) not in node.state:
+        if action.coord.c <= 0:
+            return False
+        if (action.coord + Direction.Left) not in node.state:
             return False
         move_to_cellstate = node.state.get(action.coord.add(Direction.Left))
-        if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord):
+        if move_to_cellstate.color == PlayerColor.RED:
+            return False
+        if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord).height:
             return False
     if action.direction == Direction.Right:
-        if node.state.get(action.coord + Direction.Right) not in node.state:
+        if action.coord.c >= 7:
+            return False
+        if (action.coord + Direction.Right) not in node.state:
             return False
         move_to_cellstate = node.state.get(action.coord.add(Direction.Right))
-        if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord):
+        if move_to_cellstate.color == PlayerColor.RED:
+            return False
+        if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord).height:
             return False
     return True
 
@@ -216,6 +230,11 @@ def search(
             # check if action is valid from current state
             next_node.children.append(new_node)
             queue = queue + [new_node]
+            if new_node == None:
+                print("None node for ", action)
+            else: 
+                print("For action ", action, " we get:")
+                print(render_board(new_node.state, ansi=True))
 
     # Here we're returning "hardcoded" actions as an example of the expected
     # output format. Of course, you should instead return the result of your
