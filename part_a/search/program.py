@@ -63,7 +63,8 @@ def apply_cascade(action: CascadeAction, node: Node) -> Node:
     curr_cell = new_state.pop(action.coord)
     shift = curr_cell.height
 
-    line = []   # list of relevant coords to be shifted
+    line = []   # list of coords in line with cascade direction
+    cells = [] # value of cells in line with cascade direction
     r = action.coord.r
     c = action.coord.c
     dr = action.direction.r
@@ -71,19 +72,26 @@ def apply_cascade(action: CascadeAction, node: Node) -> Node:
     while 0 <= r+dr < BOARD_N and 0 <= c+dc < BOARD_N-1:
         r += dr
         c += dc
-        line.append(Coord(r, c))
-        
-    #for i, coord in list(enumerate(list, start=0))[::-1]
-    for i in range(len(line)-1, -1, -1):
-        # Within range of cascade
-        if i < shift:
-            new_state[line[i]] = CellState(PlayerColor.RED, 1)
-        # if something will be pushed to coord
-        elif line[i-shift] in node.state:
-            new_state[line[i]] = node.state[line[i-shift]]
-        # if something needs to be removed
-        elif line[i] in node.state:
-            del new_state[line[i]]
+        coord = Coord(r, c)
+        line.append(coord)
+        cells.append(node.state.get(coord))
+    
+    new_cells = []
+    count = 0
+    for cell in cells:
+        if count < shift and cell is None:
+            count += 1
+        else:
+            if len(new_cells) + shift >= len(cells):
+                break
+            new_cells.append(cell)
+    new_cells = shift*[1] + new_cells
+
+    for coord, cell in zip(line, new_cells):
+        if isinstance(cell, CellState):
+            new_state[coord] = cell
+        elif cell == 1:
+            new_state[coord] = CellState(PlayerColor.RED, 1)
 
     return Node(state=new_state, parent=node, children=[], action=action)
 
