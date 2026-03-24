@@ -14,7 +14,7 @@ class Node:
         self.parent = parent
         self.children = children
         self.action = action # renamed path to action, thought it was more clear
-        # might need a score
+        #maybe add score and nstacks and stack height
 
 def create_root(init_state: dict[Coord, CellState]) -> Node:
     return Node(init_state, parent=None, children=[], action=None)
@@ -35,12 +35,20 @@ def apply_action(action, node) -> Node:
     return Node                       #Not sure if this is necessary just a base case type thing for empty action
 
 def apply_move(action: MoveAction, node: Node) -> Node:
+    target = action.coord + action.direction
+
     new_state = copy(node.state)    # not sure if need to copy/deepcopy
-    curr_cell = new_state.pop(action.coord)
-    new_state[action.coord+action.direction] = curr_cell
+    src_cell = new_state.pop(action.coord)
+    target_cell = new_state.get[target]
+
+    if target_cell:
+        new_state[target] = CellState(PlayerColor.RED, target_cell.height + src_cell.height)
+    else:
+        new_state[target] = CellState(PlayerColor.RED, src_cell.height)
+
     new_node = Node(new_state, node, [], action)
     node.children.append(new_node)
-    return new_node
+    return new_node ## change
 
 def apply_eat(action: EatAction, node: Node) -> Node:
     new_state = copy(node.state)    # not sure if need to copy/deepcopy
@@ -171,7 +179,7 @@ def get_path(goal: Node) -> list[Action]:
     while curr.parent:
         path.append(curr.action)
         curr = curr.parent
-    return path[::-1]
+    return reversed(path)
 
 def generate_possible_actions(node) -> list[Action]:
     actions = []
