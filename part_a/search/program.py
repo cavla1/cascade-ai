@@ -142,7 +142,7 @@ def is_valid_eat(action, node) -> bool:
             return False
         if (action.coord + Direction.Left) not in node.state:
             return False
-        move_to_cellstate = node.state.get(action.coord.add(Direction.Left))
+        move_to_cellstate = node.state.get(action.coord + Direction.Left)
         if move_to_cellstate.color == PlayerColor.RED:
             return False
         if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord).height:
@@ -152,7 +152,7 @@ def is_valid_eat(action, node) -> bool:
             return False
         if (action.coord + Direction.Right) not in node.state:
             return False
-        move_to_cellstate = node.state.get(action.coord.add(Direction.Right))
+        move_to_cellstate = node.state.get(action.coord + Direction.Right)
         if move_to_cellstate.color == PlayerColor.RED:
             return False
         if move_to_cellstate.color == PlayerColor.BLUE and move_to_cellstate.height > node.state.get(action.coord).height:
@@ -162,7 +162,8 @@ def is_valid_eat(action, node) -> bool:
 def is_valid_cascade(action, node):
     if node.state.get(action.coord).height >= 2:
         return True
-    return False      
+    else:
+        return False      
 
 def get_path(goal: Node) -> list[Action]:
     curr = goal
@@ -181,7 +182,7 @@ def generate_possible_actions(node) -> list[Action]:
                     actions.append(MoveAction(coord,direction))
                 if is_valid_eat(EatAction(coord, direction), node):
                     actions.append(EatAction(coord,direction))
-                if is_valid_move(CascadeAction(coord, direction), node):
+                if is_valid_cascade(CascadeAction(coord, direction), node):
                     actions.append(CascadeAction(coord,direction))
     return actions
 
@@ -230,11 +231,8 @@ def search(
             # check if action is valid from current state
             next_node.children.append(new_node)
             queue = queue + [new_node]
-            if new_node == None:
-                print("None node for ", action)
-            else: 
-                print("For action ", action, " we get:")
-                print(render_board(new_node.state, ansi=True))
+            print("For action ", action, " we get:")
+            print(render_board(new_node.state, ansi=True))
 
     # Here we're returning "hardcoded" actions as an example of the expected
     # output format. Of course, you should instead return the result of your
