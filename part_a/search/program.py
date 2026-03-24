@@ -85,6 +85,8 @@ def apply_cascade(action: CascadeAction, node: Node) -> Node:
         elif line[i] in node.state:
             del new_state[line[i]]
 
+    return Node(state=new_state, parent=node, children=[], action=action)
+
 def is_valid(action, node) -> bool:
     if isinstance(action, MoveAction):
         return is_valid_move(action, node)
