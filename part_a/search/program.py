@@ -269,7 +269,7 @@ def search_bfs(
 def manhattan_distance(coord1, coord2):
     return abs(coord1.r - coord2.r) + abs(coord1.c - coord2.c)
 
-def heuristic(node: Node) -> float:
+def heuristic_manhattan(node: Node) -> float:
     cost_so_far = node.depth
 
     min_man_dis = 100
@@ -277,14 +277,27 @@ def heuristic(node: Node) -> float:
         if node.state[coord_red].color == PlayerColor.RED: 
             for coord_blue in node.state.keys():
                 if node.state[coord_blue].color == PlayerColor.BLUE:
+                    if node.state[coord_red].height == 1 and node.state[coord_blue].height > 1: #idea: ignore if red stack is height 1 and other stack is higher, becuase then this red stack has no way to eliminite the blue one
+                        continue
                     new_dis = manhattan_distance(coord_red, coord_blue)
                     if new_dis < min_man_dis:
                         min_man_dis = new_dis
                 else:
-                    min_man_dis = 0
+                    min_man_dis = 0 #if no blue stacks left we return 0
     estimated_cost = min_man_dis/12
     return cost_so_far + estimated_cost
 
+
+def stack_removal_heuristic(node: Node) -> float:
+    cost_so_far = node.depth
+    count = 0
+    for coord in node.state.keys():
+        if node.state[coord].color == PlayerColor.BLUE:
+            count = count + 1
+    return cost_so_far + count/7
+
+def heuristic(node:Node) -> float:
+    return max(stack_removal_heuristic(node), heuristic_manhattan(node))
 
 def search(board: dict[Coord, CellState]
 ) -> list[Action] | None:
