@@ -56,7 +56,7 @@ def apply_eat(action: EatAction, node: Node) -> Node:
     new_state = copy(node.state)    # not sure if need to copy/deepcopy
     curr_cell = new_state.pop(action.coord)
     new_state[action.coord+action.direction] = curr_cell
-    new_node = Node(new_state, node, [], action, Node.depth + 1)
+    new_node = Node(new_state, node, [], action, node.depth + 1)
     node.children.append(new_node)
     return new_node
 
@@ -95,7 +95,7 @@ def apply_cascade(action: CascadeAction, node: Node) -> Node:
         elif cell == 1:
             new_state[coord] = CellState(PlayerColor.RED, 1)
 
-    return Node(state=new_state, parent=node, children=[], action=action, depth = Node.depth + 1)
+    return Node(state=new_state, parent=node, children=[], action=action, depth = node.depth + 1)
 
 def is_valid(action, node) -> bool:
     if isinstance(action, MoveAction):
@@ -208,7 +208,7 @@ def generate_possible_actions(node) -> list[Action]:
 
 
 
-def search(
+def search_bfs(
     board: dict[Coord, CellState]
 ) -> list[Action] | None:
     """
@@ -266,26 +266,44 @@ def search(
         EatAction(Coord(4, 3), Direction.Down),
     ]
 
+def manhattan_distance(coord1, coord2):
+    return abs(coord1.r - coord2.r) + abs(coord1.c - coord2.c)
+
 def heuristic(node: Node) -> float:
     cost_so_far = node.depth
-    estimated_cost = 1
+
+    min_man_dis = 100
+    for coord_red in node.state.keys():
+        if node.state[coord_red].color == PlayerColor.RED: 
+            for coord_blue in node.state.keys():
+                if node.state[coord_blue].color == PlayerColor.BLUE:
+                    new_dis = manhattan_distance(coord_red, coord_blue)
+                    if new_dis < min_man_dis:
+                        min_man_dis = new_dis
+                else:
+                    min_man_dis = 0
+    estimated_cost = min_man_dis/12
     return cost_so_far + estimated_cost
 
 
-def search_astar(board: dict[Coord, CellState]
+def search(board: dict[Coord, CellState]
 ) -> list[Action] | None:
     
     heap = []
     counter = 0         # counter for tiebreak
     heapq.heappush(heap, (0,counter,create_root(board)))
     counter = counter + 1
+    visited = []
 
     while True: 
         if heap == []:
         # no more possible states
             return None
         # expand next node in queue
-        next_node = heapq.heappop(heap)
+        _, _, next_node = heapq.heappop(heap)
+        if next_node.state in visited:
+            continue
+        visited.append(next_node.state)
         if goal_test(next_node.state):
             return get_path(next_node)
         # create a new node for each valid action applied to next_node
@@ -293,7 +311,10 @@ def search_astar(board: dict[Coord, CellState]
             new_node = apply_action(action, next_node)
             next_node.children.append(new_node)
             priority = heuristic(new_node)
-            heap.heappush(heap, (priority, counter, new_node))
+            heapq.heappush(heap, (priority, counter, new_node))
             counter = counter + 1
+            print("For action ", action, " we get:")
+            print(render_board(new_node.state, ansi=True))
+
 
 
