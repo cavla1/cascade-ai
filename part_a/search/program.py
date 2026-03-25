@@ -10,16 +10,16 @@ import heapq
 
 
 class Node:
-    def __init__(self, state: dict[Coord, CellState], parent: Node, children: list[Node], action: Action, depth: int):
+    def __init__(self, state: dict[Coord, CellState], parent: Node, children: list[Node], action: Action, cost: int):
         self.state = state
         self.parent = parent
         self.children = children
-        self.action = action # renamed path to action, thought it was more clear
-        self.depth = depth # added depth so that we dont have to compute the complete path every time
+        self.action = action
+        self.cost = cost # added cost so that we dont have to compute the complete path every time
         #maybe add score and nstacks and stack height
 
 def create_root(init_state: dict[Coord, CellState]) -> Node:
-    return Node(init_state, parent=None, children=[], action=None, depth = 0)
+    return Node(init_state, parent=None, children=[], action=None, cost=0)
 
 def goal_test(board_state: dict) -> bool:
     for cell in board_state.values():
@@ -48,7 +48,7 @@ def apply_move(action: MoveAction, node: Node) -> Node:
     else:
         new_state[target] = CellState(PlayerColor.RED, src_cell.height)
 
-    new_node = Node(new_state, node, [], action, node.depth + 1)
+    new_node = Node(new_state, node, [], action, node.cost + 1)
     node.children.append(new_node)
     return new_node
 
@@ -56,7 +56,7 @@ def apply_eat(action: EatAction, node: Node) -> Node:
     new_state = copy(node.state)    # not sure if need to copy/deepcopy
     curr_cell = new_state.pop(action.coord)
     new_state[action.coord+action.direction] = curr_cell
-    new_node = Node(new_state, node, [], action, node.depth + 1)
+    new_node = Node(new_state, node, [], action, node.cost + 1)
     node.children.append(new_node)
     return new_node
 
@@ -95,7 +95,7 @@ def apply_cascade(action: CascadeAction, node: Node) -> Node:
         elif cell == 1:
             new_state[coord] = CellState(PlayerColor.RED, 1)
 
-    return Node(state=new_state, parent=node, children=[], action=action, depth = node.depth + 1)
+    return Node(state=new_state, parent=node, children=[], action=action, cost = node.cost + 1)
 
 def is_valid(action, node) -> bool:
     if isinstance(action, MoveAction):
@@ -207,6 +207,69 @@ def generate_possible_actions(node) -> list[Action]:
     return actions
 
 
+def manhattan_distance(coord1, coord2):
+    return abs(coord1.r - coord2.r) + abs(coord1.c - coord2.c)
+
+def heuristic(state: dict[Coord: CellState]) -> float:
+
+    min_man_dis = 100
+    for coord_red in state.keys():
+        if state[coord_red].color == PlayerColor.RED: 
+            for coord_blue in state.keys():
+                if state[coord_blue].color == PlayerColor.BLUE:
+                    new_dis = manhattan_distance(coord_red, coord_blue)
+                    if new_dis < min_man_dis:
+                        min_man_dis = new_dis
+                else:
+                    min_man_dis = 0
+    estimated_cost = min_man_dis/12
+    return estimated_cost
+
+
+def search(board: dict[Coord, CellState]
+) -> list[Action] | None:
+    
+    heap = []
+    counter = 0         # counter for tiebreak
+    priority = heuristic(board)
+    heapq.heappush(heap, (priority,counter,create_root(board)))
+    expanded = set()
+    costs = {frozenset(board.items()): 0}
+
+    while True: 
+        if heap == []:
+        # no more possible states
+            return None
+        # expand next node in queue
+        _, _, curr_node = heapq.heappop(heap)
+        state_key = frozenset(curr_node.state.items())
+
+        if state_key in expanded:
+            continue
+
+        if goal_test(curr_node.state):
+            return get_path(curr_node)
+        
+        expanded.add(state_key)
+        
+        # create a new node for each valid action applied to next_node
+        for action in generate_possible_actions(curr_node):
+            next_node = apply_action(action, curr_node)
+            next_state_key = frozenset(next_node.state.items())
+
+            next_cost = next_node.cost
+            
+            if next_state_key not in costs or next_cost < costs[next_state_key]:
+                costs[next_state_key] = next_cost
+
+                priority = next_cost + heuristic(next_node.state)
+
+                counter += 1
+                heapq.heappush(heap, (priority, counter, next_node))
+
+            # print("For action ", action, " we get:")
+            # print(render_board(next_node.state, ansi=True))
+
 
 def search_bfs(
     board: dict[Coord, CellState]
@@ -265,69 +328,3 @@ def search_bfs(
         MoveAction(Coord(3, 3), Direction.Down),
         EatAction(Coord(4, 3), Direction.Down),
     ]
-
-def manhattan_distance(coord1, coord2):
-    return abs(coord1.r - coord2.r) + abs(coord1.c - coord2.c)
-
-def heuristic_manhattan(node: Node) -> float:
-    cost_so_far = node.depth
-
-    min_man_dis = 100
-    for coord_red in node.state.keys():
-        if node.state[coord_red].color == PlayerColor.RED: 
-            for coord_blue in node.state.keys():
-                if node.state[coord_blue].color == PlayerColor.BLUE:
-                    if node.state[coord_red].height == 1 and node.state[coord_blue].height > 1: #idea: ignore if red stack is height 1 and other stack is higher, becuase then this red stack has no way to eliminite the blue one
-                        continue
-                    new_dis = manhattan_distance(coord_red, coord_blue)
-                    if new_dis < min_man_dis:
-                        min_man_dis = new_dis
-                else:
-                    min_man_dis = 0 #if no blue stacks left we return 0
-    estimated_cost = min_man_dis/12
-    return cost_so_far + estimated_cost
-
-
-def stack_removal_heuristic(node: Node) -> float:
-    cost_so_far = node.depth
-    count = 0
-    for coord in node.state.keys():
-        if node.state[coord].color == PlayerColor.BLUE:
-            count = count + 1
-    return cost_so_far + count/7
-
-def heuristic(node:Node) -> float:
-    return max(stack_removal_heuristic(node), heuristic_manhattan(node))
-
-def search(board: dict[Coord, CellState]
-) -> list[Action] | None:
-    
-    heap = []
-    counter = 0         # counter for tiebreak
-    heapq.heappush(heap, (0,counter,create_root(board)))
-    counter = counter + 1
-    visited = []
-
-    while True: 
-        if heap == []:
-        # no more possible states
-            return None
-        # expand next node in queue
-        _, _, next_node = heapq.heappop(heap)
-        if next_node.state in visited:
-            continue
-        visited.append(next_node.state)
-        if goal_test(next_node.state):
-            return get_path(next_node)
-        # create a new node for each valid action applied to next_node
-        for action in generate_possible_actions(next_node):
-            new_node = apply_action(action, next_node)
-            next_node.children.append(new_node)
-            priority = heuristic(new_node)
-            heapq.heappush(heap, (priority, counter, new_node))
-            counter = counter + 1
-            print("For action ", action, " we get:")
-            print(render_board(new_node.state, ansi=True))
-
-
-
