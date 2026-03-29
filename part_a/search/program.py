@@ -34,7 +34,7 @@ def apply_action(action, node) -> Node:
         return apply_eat(action, node)
     if isinstance(action, CascadeAction):
         return apply_cascade(action, node)
-    return Node                       #Not sure if this is necessary just a base case type thing for empty action
+    return None
 
 def apply_move(action: MoveAction, node: Node) -> Node:
     target = action.coord + action.direction
@@ -71,7 +71,7 @@ def apply_cascade(action: CascadeAction, node: Node) -> Node:
     c = action.coord.c
     dr = action.direction.r
     dc = action.direction.c
-    while 0 <= r+dr < BOARD_N and 0 <= c+dc < BOARD_N-1:
+    while 0 <= r+dr < BOARD_N and 0 <= c+dc < BOARD_N:
         r += dr
         c += dc
         coord = Coord(r, c)
@@ -84,6 +84,7 @@ def apply_cascade(action: CascadeAction, node: Node) -> Node:
         if count < shift and cell is None:
             count += 1
         else:
+            # rest of cells will be pushed off edge
             if len(new_cells) + shift >= len(cells):
                 break
             new_cells.append(cell)
@@ -198,40 +199,52 @@ def generate_possible_actions(node) -> list[Action]:
     for coord in node.state.keys():
         if node.state[coord].color == PlayerColor.RED and node.state[coord].height > 0:
             for direction in Direction:
-                if is_valid_move(MoveAction(coord, direction), node):
-                    actions.append(MoveAction(coord,direction))
                 if is_valid_eat(EatAction(coord, direction), node):
                     actions.append(EatAction(coord,direction))
                 if is_valid_cascade(CascadeAction(coord, direction), node):
                     actions.append(CascadeAction(coord,direction))
+                if is_valid_move(MoveAction(coord, direction), node):
+                    actions.append(MoveAction(coord,direction))
     return actions
 
 
-def manhattan_distance(coord1, coord2):
-    return abs(coord1.r - coord2.r) + abs(coord1.c - coord2.c)
+def dist_h(state, blue_coords, red_coords):
+    if not blue_coords or not red_coords:
+        return 0
 
-def heuristic(state: dict[Coord: CellState]) -> float:
+    num_reds = sum(state[coord].height for coord in red_coords)
 
-    min_man_dis = 100
-    for coord_red in state.keys():
-        if state[coord_red].color == PlayerColor.RED: 
-            for coord_blue in state.keys():
-                if state[coord_blue].color == PlayerColor.BLUE:
-                    new_dis = manhattan_distance(coord_red, coord_blue)
-                    if new_dis < min_man_dis:
-                        min_man_dis = new_dis
-                else:
-                    min_man_dis = 0
-    estimated_cost = min_man_dis/12
-    return estimated_cost
+    min_dist = min(abs(r.r - b.r) + abs(r.c - b.c) 
+        for r in red_coords 
+        for b in blue_coords)
+    
+    return min_dist / num_reds
 
+def line_h(state, blue_coords, red_coords):
+    rows = {b.r for b in blue_coords}
+    cols = {b.c for b in blue_coords}
+
+    return min(len(rows), min(cols))
+
+def heuristic(state):
+    blue_coords = [c for c, s in state.items() if s.color == PlayerColor.BLUE]
+    red_coords = [c for c, s in state.items() if s.color == PlayerColor.RED]
+
+    if not blue_coords:
+        return 0
+    
+    h_dist = dist_h(state, blue_coords, red_coords)
+    h_line = line_h(state, blue_coords, red_coords)
+
+    return max(h_dist, h_line)
 
 def search(board: dict[Coord, CellState]
 ) -> list[Action] | None:
     
     heap = []
     counter = 0         # counter for tiebreak
-    priority = heuristic(board)
+    weight = 1
+    priority = weight * heuristic(board)
     heapq.heappush(heap, (priority,counter,create_root(board)))
     expanded = set()
     costs = {frozenset(board.items()): 0}
@@ -262,69 +275,10 @@ def search(board: dict[Coord, CellState]
             if next_state_key not in costs or next_cost < costs[next_state_key]:
                 costs[next_state_key] = next_cost
 
-                priority = next_cost + heuristic(next_node.state)
+                priority = next_cost + weight*heuristic(next_node.state)
 
                 counter += 1
                 heapq.heappush(heap, (priority, counter, next_node))
 
             # print("For action ", action, " we get:")
             # print(render_board(next_node.state, ansi=True))
-
-
-def search_bfs(
-    board: dict[Coord, CellState]
-) -> list[Action] | None:
-    """
-    This is the entry point for your submission. You should modify this
-    function to solve the search problem discussed in the Part A specification.
-    See `core.py` for information on the types being used here.
-
-    Parameters:
-        `board`: a dictionary representing the initial board state, mapping
-            coordinates to `CellState` instances (each with a `.color` and
-            `.height` attribute).
-
-    Returns:
-        A list of actions (MoveAction, EatAction, or CascadeAction), or `None`
-        if no solution is possible.
-    """
-
-    # The render_board() function is handy for debugging. It will print out a
-    # board state in a human-readable format. If your terminal supports ANSI
-    # codes, set the `ansi` flag to True to print a colour-coded version!
-    print(render_board(board, ansi=True))
-
-    # Do some impressive AI stuff here to find the solution...
-    # ...
-    # ... (your solution goes here!)
-    # ...
-    queue = [create_root(board)]
-    visited = []
-    while True: 
-        if queue == []:
-        # no more possible states
-            return None
-        # expand next node in queue
-        next_node = queue.pop(0)
-        if next_node.state in visited:
-            continue
-        visited.append(next_node.state)
-        if goal_test(next_node.state):
-            return get_path(next_node)
-        # create a new node for each valid action applied to next_node
-        for action in generate_possible_actions(next_node):
-            new_node = apply_action(action, next_node)
-            # check if action is valid from current state
-            next_node.children.append(new_node) # double counted in apply_ functions
-            queue = queue + [new_node]
-            # print("For action ", action, " we get:")
-            # print(render_board(new_node.state, ansi=True))
-
-    # Here we're returning "hardcoded" actions as an example of the expected
-    # output format. Of course, you should instead return the result of your
-    # search algorithm. Remember: if no solution is possible for a given input,
-    # return `None` instead of a list.
-    return [
-        MoveAction(Coord(3, 3), Direction.Down),
-        EatAction(Coord(4, 3), Direction.Down),
-    ]
