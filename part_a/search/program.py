@@ -6,6 +6,7 @@ from .core import CellState, Coord, Direction, Action, MoveAction, EatAction, Ca
 from .utils import render_board
 from copy import copy
 import heapq
+from math import ceil
 
 
 
@@ -181,7 +182,10 @@ def is_valid_eat(action, node) -> bool:
     return True
 
 def is_valid_cascade(action, node):
-    if node.state.get(action.coord).height >= 2:
+    dr = action.direction.r
+    dc = action.direction.c
+    if node.state.get(action.coord).height >= 2 and \
+        0<=action.coord.r+dr<BOARD_N and 0<=action.coord.c+dc<BOARD_N:
         return True
     else:
         return False      
@@ -207,24 +211,28 @@ def generate_possible_actions(node) -> list[Action]:
                     actions.append(MoveAction(coord,direction))
     return actions
 
-
 def dist_h(blues, reds):
     if not blues or not reds:
         return 0
-
-    min_dist = min(abs(r.r - b.r) + abs(r.c - b.c) 
-        for r in reds 
-        for b in blues)
     
-    return min_dist
+    min_dists = []
+    for b in blues:
+        d = min(abs(r.r - b.r) + abs(r.c - b.c) for r in reds)
+        min_dists.append(d)
+    return max(min_dists)
 
-def line_h(blues):
-    rows = {b.r for b in blues}
-    cols = {b.c for b in blues}
-    return min(len(rows), len(cols))
-
-def stacks_h(blues):
-    return len(blues)
+def disjoint_lines(blues):
+    count = 0
+    rows = set()
+    cols = set()
+    
+    for r, c in blues:
+        if r not in rows and c not in cols:
+            count += 1
+            rows.add(r)
+            cols.add(c)
+            
+    return count if count>1 else 0
 
 def heuristic(state: dict[Coord: CellState]):
     blue_coords = [c for c, s in state.items() if s.color == PlayerColor.BLUE]
@@ -232,19 +240,18 @@ def heuristic(state: dict[Coord: CellState]):
 
     num_reds = sum(state[coord].height for coord in red_coords)
     
-    dist = dist_h(blue_coords, red_coords) / num_reds
-    stacks = stacks_h(blue_coords) / num_reds
-    lines = line_h(blue_coords) / num_reds
+    dist = ceil(dist_h(blue_coords, red_coords) / num_reds)
+    lines = disjoint_lines(blue_coords)
 
-    return max(dist, stacks, lines)
+    return max(dist, lines), len(blue_coords)
 
 def search(board: dict[Coord, CellState]
 ) -> list[Action] | None:
     
     heap = []
-    counter = 0         # counter for tiebreak
-    priority = heuristic(board)
-    heapq.heappush(heap, (priority,counter,create_root(board)))
+    counter = 0         # counter for last resort tiebreak
+    priority, *tiebreak = heuristic(board)
+    heapq.heappush(heap, (priority,tiebreak,counter,create_root(board)))
     expanded = set()
     costs = {frozenset(board.items()): 0}
 
@@ -274,10 +281,11 @@ def search(board: dict[Coord, CellState]
             if next_state_key not in costs or next_cost < costs[next_state_key]:
                 costs[next_state_key] = next_cost
 
-                priority = next_cost + heuristic(next_node.state)
+                priority, *tiebreak = heuristic(next_node.state)
+                priority += next_cost
 
                 counter += 1
-                heapq.heappush(heap, (priority, counter, next_node))
+                heapq.heappush(heap, (priority, tiebreak, counter, next_node))
 
             # print("For action ", action, " we get:")
             # print(render_board(next_node.state, ansi=True))
