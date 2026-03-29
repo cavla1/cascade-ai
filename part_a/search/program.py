@@ -208,43 +208,42 @@ def generate_possible_actions(node) -> list[Action]:
     return actions
 
 
-def dist_h(state, blue_coords, red_coords):
-    if not blue_coords or not red_coords:
+def dist_h(blues, reds):
+    if not blues or not reds:
         return 0
 
-    num_reds = sum(state[coord].height for coord in red_coords)
-
     min_dist = min(abs(r.r - b.r) + abs(r.c - b.c) 
-        for r in red_coords 
-        for b in blue_coords)
+        for r in reds 
+        for b in blues)
     
-    return min_dist / num_reds
+    return min_dist
 
-def line_h(state, blue_coords, red_coords):
-    rows = {b.r for b in blue_coords}
-    cols = {b.c for b in blue_coords}
+def line_h(blues):
+    rows = {b.r for b in blues}
+    cols = {b.c for b in blues}
+    return min(len(rows), len(cols))
 
-    return min(len(rows), min(cols))
+def stacks_h(blues):
+    return len(blues)
 
-def heuristic(state):
+def heuristic(state: dict[Coord: CellState]):
     blue_coords = [c for c, s in state.items() if s.color == PlayerColor.BLUE]
     red_coords = [c for c, s in state.items() if s.color == PlayerColor.RED]
 
-    if not blue_coords:
-        return 0
+    num_reds = sum(state[coord].height for coord in red_coords)
     
-    h_dist = dist_h(state, blue_coords, red_coords)
-    h_line = line_h(state, blue_coords, red_coords)
+    dist = dist_h(blue_coords, red_coords) / num_reds
+    stacks = stacks_h(blue_coords) / num_reds
+    lines = line_h(blue_coords) / num_reds
 
-    return max(h_dist, h_line)
+    return max(dist, stacks, lines)
 
 def search(board: dict[Coord, CellState]
 ) -> list[Action] | None:
     
     heap = []
     counter = 0         # counter for tiebreak
-    weight = 1
-    priority = weight * heuristic(board)
+    priority = heuristic(board)
     heapq.heappush(heap, (priority,counter,create_root(board)))
     expanded = set()
     costs = {frozenset(board.items()): 0}
@@ -254,7 +253,8 @@ def search(board: dict[Coord, CellState]
         # no more possible states
             return None
         # expand next node in queue
-        _, _, curr_node = heapq.heappop(heap)
+        *_, curr_node = heapq.heappop(heap)
+        # key must be hashable
         state_key = frozenset(curr_node.state.items())
 
         if state_key in expanded:
@@ -265,7 +265,6 @@ def search(board: dict[Coord, CellState]
         
         expanded.add(state_key)
         
-        # create a new node for each valid action applied to next_node
         for action in generate_possible_actions(curr_node):
             next_node = apply_action(action, curr_node)
             next_state_key = frozenset(next_node.state.items())
@@ -275,7 +274,7 @@ def search(board: dict[Coord, CellState]
             if next_state_key not in costs or next_cost < costs[next_state_key]:
                 costs[next_state_key] = next_cost
 
-                priority = next_cost + weight*heuristic(next_node.state)
+                priority = next_cost + heuristic(next_node.state)
 
                 counter += 1
                 heapq.heappush(heap, (priority, counter, next_node))
