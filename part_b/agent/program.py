@@ -3,7 +3,17 @@
 
 from referee.game import PlayerColor, Coord, Direction, \
     Action, PlaceAction, MoveAction, EatAction, CascadeAction
-
+"""
+Import ApplyActions - Chris
+PlaceAction - Chris
+placing logic (towards centre)
+__init__
+action (minimax decision)
+minimax value (max calls min)
+update - Dan
+cutoff/terminal (depth or terminal state)
+utility
+"""
 
 class Agent:
     """
@@ -23,6 +33,8 @@ class Agent:
                 print("Testing: I am playing as RED (first player)")
             case PlayerColor.BLUE:
                 print("Testing: I am playing as BLUE")
+
+        self.state = dict() #Coord: CellState 
 
     def action(self, **referee: dict) -> Action:
         """
