@@ -2,7 +2,7 @@
 # Project Part B: Game Playing Agent
 
 from referee.game import PlayerColor, Coord, Direction, \
-    Action, PlaceAction, MoveAction, EatAction, CascadeAction
+    Action, PlaceAction, MoveAction, EatAction, CascadeAction, CellState, BOARD_N
 """
 Import ApplyActions - Chris
 PlaceAction - Chris
@@ -81,17 +81,66 @@ class Agent:
         match action:
             case PlaceAction(coord):
                 print(f"Testing: {color} played PLACE action at {coord}")
+                self.state[coord] = CellState(color, 3)
+
             case MoveAction(coord, direction):
                 print(f"Testing: {color} played MOVE action:")
                 print(f"  Coord: {coord}")
                 print(f"  Direction: {direction}")
+                target = action.coord + action.direction
+
+                src_cell = self.state.pop(coord)
+                target_cell = self.state.get(target)
+
+                if target_cell:
+                    self.state[target] = CellState(color, target_cell.height + src_cell.height)
+                else:
+                    self.state[target] = CellState(color, src_cell.height)
+
             case EatAction(coord, direction):
                 print(f"Testing: {color} played EAT action:")
                 print(f"  Coord: {coord}")
                 print(f"  Direction: {direction}")
+                curr_cell = self.state.pop(action.coord)
+                self.state[action.coord+action.direction] = curr_cell
+
             case CascadeAction(coord, direction):
                 print(f"Testing: {color} played CASCADE action:")
                 print(f"  Coord: {coord}")
                 print(f"  Direction: {direction}")
+                curr_cell = self.state.pop(action.coord)
+                shift = curr_cell.height
+
+                line = []   # list of coords in line with cascade direction
+                cells = [] # value of cells in line with cascade direction
+                r = action.coord.r
+                c = action.coord.c
+                dr = action.direction.r
+                dc = action.direction.c
+                while 0 <= r+dr < BOARD_N and 0 <= c+dc < BOARD_N:
+                    r += dr
+                    c += dc
+                    coord = Coord(r, c)
+                    line.append(coord)
+                    cells.append(self.state.get(coord))
+                
+                new_cells = []
+                count = 0
+                for cell in cells:
+                    if count < shift and cell is None:
+                        count += 1
+                    else:
+                        # rest of cells will be pushed off edge
+                        if len(new_cells) + shift >= len(cells):
+                            break
+                        new_cells.append(cell)
+                new_cells = shift*[1] + new_cells
+
+                for coord, cell in zip(line, new_cells):
+                    if isinstance(cell, CellState):
+                        self.state[coord] = cell
+                    elif cell == 1:
+                        self.state[coord] = CellState(PlayerColor.RED, 1)
+
             case _:
                 raise ValueError(f"Unknown action type: {action}")
