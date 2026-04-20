@@ -1,6 +1,8 @@
 # COMP30024 Artificial Intelligence, Semester 1 2026
 # Project Part B: Game Playing Agent
 
+import math #Are we allowed to do that?
+
 from referee.game import PlayerColor, Coord, Direction, \
     Action, PlaceAction, MoveAction, EatAction, CascadeAction, CellState, BOARD_N
 """
@@ -14,6 +16,53 @@ update - Dan
 cutoff/terminal (depth or terminal state)
 utility
 """
+
+
+# Node class (modified from part A)
+class Node:
+    def __init__(self, state: dict[Coord, CellState], parent: Node, height: int, next_turn_color: PlayerColor):
+        self.state = state
+        self.parent = parent
+        self.height = height            #height in tree
+        self.next_turn_color = next_turn_color
+        
+def generate_possible_actions(node, color):
+    pass
+
+def generate_sucessors(node):
+    pass
+
+def cutoff_test(node):
+    return node.height < 5              #to be improved
+
+def utility(node):
+    return 0                            #to be implemented
+
+def max_value(node : Node, alpha, beta):
+    new_alpha = alpha
+    if cutoff_test(node):
+        return utility(node)
+    for s in generate_sucessors(node):
+        new_alpha = max(new_alpha, min_value(s, new_alpha, beta))
+        if new_alpha >= beta:
+            return beta
+    return new_alpha
+
+def min_value(node : Node, alpha, beta):
+    new_beta = beta
+    if cutoff_test(node):
+        return utility(node)
+    for s in generate_sucessors(node):
+        new_beta = min(new_beta, max_value(s, alpha, new_beta))
+        if new_beta >= alpha:
+            return alpha
+    return new_beta
+
+def minimax_decision(state, color):
+    root = Node(state, None, 0, color)
+    value = {}
+    for action in generate_possible_actions(root, color):
+        value[action] = min_value(root, -math.inf, math.inf)
 
 class Agent:
     """
