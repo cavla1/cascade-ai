@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import math #Are we allowed to do that?
+import numpy as np
 
 from referee.game import PlayerColor, Coord, Direction, \
     Action, PlaceAction, MoveAction, EatAction, CascadeAction, CellState, BOARD_N
@@ -175,6 +176,7 @@ def minimax_decision(state, color):
     value = {}
     for action in generate_possible_actions(root, color):
         value[action] = min_value(apply_action(root), -math.inf, math.inf)
+    return max(value, key=value.get)
 
 class Agent:
     """
@@ -219,13 +221,7 @@ class Agent:
                     return PlaceAction(Coord(7, self._turn_count))
 
         # During play phase
-        match self._color:
-            case PlayerColor.RED:
-                print("Testing: RED is playing a MOVE action")
-                return MoveAction(Coord(0, 0), Direction.Down)
-            case PlayerColor.BLUE:
-                print("Testing: BLUE is playing a MOVE action")
-                return MoveAction(Coord(7, 0), Direction.Up)
+        return minimax_decision(self.state, self._color)
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
         """
