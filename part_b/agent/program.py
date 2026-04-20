@@ -1,6 +1,7 @@
 # COMP30024 Artificial Intelligence, Semester 1 2026
 # Project Part B: Game Playing Agent
 
+from __future__ import annotations
 import math #Are we allowed to do that?
 
 from referee.game import PlayerColor, Coord, Direction, \
@@ -20,20 +21,129 @@ utility
 
 # Node class (modified from part A)
 class Node:
-    def __init__(self, state: dict[Coord, CellState], parent: Node, height: int, next_turn_color: PlayerColor):
+    def __init__(self, state: dict[Coord, CellState], parent: Node, action: Action, height: int, next_turn_color: PlayerColor):
         self.state = state
         self.parent = parent
+        self.action = action            #last applied action
         self.height = height            #height in tree
         self.next_turn_color = next_turn_color
-        
-def generate_possible_actions(node, color):
-    pass
 
-def generate_sucessors(node):
-    pass
+def apply_action(action, node, player_color):       #apply_action from part A with new Node structure and player_color
+    pass                
+
+#imported from part A, modified for color
+def is_valid_move(action, node, player_color, opponent_color) -> bool:
+    if action.direction == Direction.Down:
+        if action.coord.r >= 7:
+            return False
+        if (action.coord + Direction.Down) in node.state:
+            move_to_cellstate = node.state.get(action.coord + Direction.Down)
+            if move_to_cellstate.color == opponent_color:
+                return False
+    elif action.direction == Direction.Up:
+        if action.coord.r <= 0:
+            return False
+        if (action.coord + Direction.Up) in node.state:
+            move_to_cellstate = node.state.get(action.coord + Direction.Up)
+            if move_to_cellstate.color == opponent_color:
+                return False
+    elif action.direction == Direction.Left:
+        if action.coord.c <= 0:
+            return False
+        if (action.coord + Direction.Left) in node.state:
+            move_to_cellstate = node.state.get(action.coord + Direction.Left)
+            if move_to_cellstate.color == opponent_color:
+                return False
+    if action.direction == Direction.Right:
+        if action.coord.c >= 7:
+            return False
+        if (action.coord + Direction.Right) in node.state:
+            move_to_cellstate = node.state.get(action.coord + Direction.Right)
+            if move_to_cellstate.color == opponent_color:
+                return False
+    return True
+
+def is_valid_eat(action, node, player_color, opponent_color) -> bool: 
+    if action.direction == Direction.Down:
+        if action.coord.r >= 7:
+            return False
+        if (action.coord + Direction.Down) not in node.state:
+            return False
+        move_to_cellstate = node.state.get(action.coord + Direction.Down)
+        if move_to_cellstate.color == player_color:
+            return False
+        if move_to_cellstate.color == opponent_color and move_to_cellstate.height > node.state.get(action.coord).height:
+            return False
+    if action.direction == Direction.Up:
+        if action.coord.r <= 0:
+            return False
+        if (action.coord + Direction.Up) not in node.state:
+            return False
+        move_to_cellstate = node.state.get(action.coord + Direction.Up)
+        if move_to_cellstate.color == player_color:
+            return False
+        if move_to_cellstate.color == opponent_color and move_to_cellstate.height > node.state.get(action.coord).height:
+            return False
+    if action.direction == Direction.Left:
+        if action.coord.c <= 0:
+            return False
+        if (action.coord + Direction.Left) not in node.state:
+            return False
+        move_to_cellstate = node.state.get(action.coord + Direction.Left)
+        if move_to_cellstate.color == player_color:
+            return False
+        if move_to_cellstate.color == opponent_color and move_to_cellstate.height > node.state.get(action.coord).height:
+            return False
+    if action.direction == Direction.Right:
+        if action.coord.c >= 7:
+            return False
+        if (action.coord + Direction.Right) not in node.state:
+            return False
+        move_to_cellstate = node.state.get(action.coord + Direction.Right)
+        if move_to_cellstate.color == player_color:
+            return False
+        if move_to_cellstate.color == opponent_color and move_to_cellstate.height > node.state.get(action.coord).height:
+            return False
+    return True
+
+def is_valid_cascade(action, node, player_color, opponent_color):
+    dr = action.direction.r
+    dc = action.direction.c
+    if node.state.get(action.coord).height >= 2 and \
+        0<=action.coord.r+dr<BOARD_N and 0<=action.coord.c+dc<BOARD_N:
+        return True
+    else:
+        return False         
+
+#player_color is color that makes next move
+def generate_possible_actions(node, player_color) -> list[Action]:
+    opponent_color = PlayerColor.RED
+    if player_color == PlayerColor.RED:
+        opponent_color = PlayerColor.BLUE
+    actions = []
+    for coord in node.state.keys():
+        if node.state[coord].color == player_color and node.state[coord].height > 0:
+            for direction in Direction:
+                if is_valid_eat(EatAction(coord, direction), node, player_color, opponent_color):
+                    actions.append(EatAction(coord,direction))
+                if is_valid_cascade(CascadeAction(coord, direction), node, player_color, opponent_color):
+                    actions.append(CascadeAction(coord,direction))
+                if is_valid_move(MoveAction(coord, direction), node, player_color, opponent_color):
+                    actions.append(MoveAction(coord,direction))
+    return actions
 
 def cutoff_test(node):
-    return node.height < 5              #to be improved
+    no_reds_left = True
+    no_blues_left = True
+    for cell in node.state.values():
+        if cell.color == PlayerColor.BLUE:
+            no_blues_left = False
+        if cell.color == PlayerColor.RED:
+            no_reds_left = False
+    if no_blues_left | no_reds_left | node.height > 5:      #True if terminal state or nodes height is bigger than 5 (to be improved)
+        return True
+    else:
+        return False
 
 def utility(node):
     return 0                            #to be implemented
@@ -42,8 +152,9 @@ def max_value(node : Node, alpha, beta):
     new_alpha = alpha
     if cutoff_test(node):
         return utility(node)
-    for s in generate_sucessors(node):
-        new_alpha = max(new_alpha, min_value(s, new_alpha, beta))
+    for action in generate_possible_actions(node):
+        new_node = apply_action(action, node, node.next_turn_color)
+        new_alpha = max(new_alpha, min_value(new_node, new_alpha, beta))
         if new_alpha >= beta:
             return beta
     return new_alpha
@@ -52,17 +163,18 @@ def min_value(node : Node, alpha, beta):
     new_beta = beta
     if cutoff_test(node):
         return utility(node)
-    for s in generate_sucessors(node):
-        new_beta = min(new_beta, max_value(s, alpha, new_beta))
+    for action in generate_possible_actions(node):
+        new_node = apply_action(action, node, node.next_turn_color)
+        new_beta = min(new_beta, max_value(new_node, alpha, new_beta))
         if new_beta >= alpha:
             return alpha
     return new_beta
 
 def minimax_decision(state, color):
-    root = Node(state, None, 0, color)
+    root = Node(state, None, None, 0, color)
     value = {}
     for action in generate_possible_actions(root, color):
-        value[action] = min_value(root, -math.inf, math.inf)
+        value[action] = min_value(apply_action(root), -math.inf, math.inf)
 
 class Agent:
     """
