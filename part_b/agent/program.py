@@ -4,11 +4,12 @@
 from __future__ import annotations
 import math #Are we allowed to do that?
 import numpy as np
+from copy import copy
 
 from referee.game import PlayerColor, Coord, Direction, \
     Action, PlaceAction, MoveAction, EatAction, CascadeAction, CellState, BOARD_N
 """
-Import ApplyActions - Chris
+Import ApplyActions - Chris - just copy pasted from last part
 PlaceAction - Chris
 placing logic (towards centre)
 __init__
@@ -28,9 +29,7 @@ class Node:
         self.action = action            #last applied action
         self.height = height            #height in tree
         self.next_turn_color = next_turn_color
-
-def apply_action(action, node, player_color):       #apply_action from part A with new Node structure and player_color
-    pass                
+     
 
 #imported from part A, modified for color
 def is_valid_move(action, node, player_color, opponent_color) -> bool:
@@ -301,3 +300,79 @@ class Agent:
 
             case _:
                 raise ValueError(f"Unknown action type: {action}")
+
+def place_piece(board, coord, colour):
+    pass
+
+#Apply actions
+
+def apply_action(action, node, player_colour) -> Node:
+    if isinstance(action, MoveAction):
+        return apply_move(action, node, player_colour)
+    if isinstance(action, EatAction):
+        return apply_eat(action, node, player_colour)
+    if isinstance(action, CascadeAction):
+        return apply_cascade(action, node, player_colour)
+    return None
+
+def apply_move(action: MoveAction, node: Node, player_colour) -> Node:
+    target = action.coord + action.direction
+
+    new_state = copy(node.state)    # not sure if need to copy/deepcopy
+    src_cell = new_state.pop(action.coord)
+    target_cell = new_state.get(target)
+
+    if target_cell:
+        new_state[target] = CellState(player_colour, target_cell.height + src_cell.height)
+    else:
+        new_state[target] = CellState(player_colour, src_cell.height)
+
+    new_node = Node(new_state, node, [], action, node.cost + 1)
+    node.children.append(new_node)
+    return new_node
+
+def apply_eat(action: EatAction, node: Node, player_colour) -> Node: #prob don't need player_colour here
+    new_state = copy(node.state)    # not sure if need to copy/deepcopy
+    curr_cell = new_state.pop(action.coord)
+    new_state[action.coord+action.direction] = curr_cell
+    new_node = Node(new_state, node, [], action, node.cost + 1)
+    node.children.append(new_node)
+    return new_node
+
+def apply_cascade(action: CascadeAction, node: Node, player_colour) -> Node:
+    new_state = copy(node.state)    # not sure if need to copy/deepcopy
+    curr_cell = new_state.pop(action.coord)
+    shift = curr_cell.height
+
+    line = []   # list of coords in line with cascade direction
+    cells = [] # value of cells in line with cascade direction
+    r = action.coord.r
+    c = action.coord.c
+    dr = action.direction.r
+    dc = action.direction.c
+    while 0 <= r+dr < BOARD_N and 0 <= c+dc < BOARD_N:
+        r += dr
+        c += dc
+        coord = Coord(r, c)
+        line.append(coord)
+        cells.append(node.state.get(coord))
+    
+    new_cells = []
+    count = 0
+    for cell in cells:
+        if count < shift and cell is None:
+            count += 1
+        else:
+            # rest of cells will be pushed off edge
+            if len(new_cells) + shift >= len(cells):
+                break
+            new_cells.append(cell)
+    new_cells = shift*[1] + new_cells
+
+    for coord, cell in zip(line, new_cells):
+        if isinstance(cell, CellState):
+            new_state[coord] = cell
+        elif cell == 1:
+            new_state[coord] = CellState(player_colour, 1)
+
+    return Node(state=new_state, parent=node, children=[], action=action, cost = node.cost + 1)
