@@ -113,7 +113,14 @@ def is_valid_cascade(action, node, player_color, opponent_color):
         0<=action.coord.r+dr<BOARD_N and 0<=action.coord.c+dc<BOARD_N:
         return True
     else:
-        return False         
+        return False       
+
+def is_valid_place(action, node, player_colour, opponent_colour):
+    state = node.state
+    for dir in Direction:
+        if state[action.coord+dir].colour == opponent_colour:
+            return False
+    return True
 
 #player_color is color that makes next move
 def generate_possible_actions(node, player_color) -> list[Action]:
@@ -301,9 +308,6 @@ class Agent:
             case _:
                 raise ValueError(f"Unknown action type: {action}")
 
-def place_piece(board, coord, colour):
-    pass
-
 #Apply actions
 
 def apply_action(action, node, player_colour) -> Node:
@@ -313,7 +317,15 @@ def apply_action(action, node, player_colour) -> Node:
         return apply_eat(action, node, player_colour)
     if isinstance(action, CascadeAction):
         return apply_cascade(action, node, player_colour)
+    if isinstance(action, PlaceAction):
+        return apply_place(action, node, player_colour)
     return None
+
+def apply_place(action: PlaceAction, node: Node, player_colour) -> Node:
+    new_state = copy(node.state)
+    new_state[action.coord] = CellState(player_colour, 1)
+    next_turn_colour = PlayerColor.BLUE if player_colour == PlayerColor.RED else PlayerColor.RED
+    return Node(new_state, node, action, 0, next_turn_colour)
 
 def apply_move(action: MoveAction, node: Node, player_colour) -> Node:
     target = action.coord + action.direction
