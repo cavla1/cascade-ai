@@ -7,7 +7,7 @@ import numpy as np
 from copy import copy
 
 from referee.game import PlayerColor, Coord, Direction, \
-    Action, PlaceAction, MoveAction, EatAction, CascadeAction, CellState, BOARD_N
+    Action, PlaceAction, MoveAction, EatAction, CascadeAction, CellState, Board, BOARD_N
 """
 Import ApplyActions - Chris - just copy pasted from last part
 PlaceAction - Chris
@@ -130,7 +130,7 @@ def generate_possible_actions(node, player_color) -> list[Action]:
     actions = []
     for coord in node.state.keys():
         if node.state[coord].color == player_color and node.state[coord].height > 0:
-            for direction in Direction:
+            for direction in {Direction.Up, Direction.Down, Direction.Right, Direction.Left}:
                 if is_valid_eat(EatAction(coord, direction), node, player_color, opponent_color):
                     actions.append(EatAction(coord,direction))
                 if is_valid_cascade(CascadeAction(coord, direction), node, player_color, opponent_color):
@@ -139,7 +139,7 @@ def generate_possible_actions(node, player_color) -> list[Action]:
                     actions.append(MoveAction(coord,direction))
     return actions
 
-def cutoff_test(node):
+def cutoff_test(node): 
     no_reds_left = True
     no_blues_left = True
     for cell in node.state.values():
@@ -147,32 +147,41 @@ def cutoff_test(node):
             no_blues_left = False
         if cell.color == PlayerColor.RED:
             no_reds_left = False
-    if no_blues_left | no_reds_left | node.height > 5:      #True if terminal state or nodes height is bigger than 5 (to be improved)
+    if (no_blues_left | no_reds_left | node.height > 2):      #True if terminal state or nodes height is bigger than 5 (to be improved)
         return True
     else:
         return False
 
-def utility(node):
-    return 0                            #to be implemented
+def utility(node, global_turn):
+    player_count = 0
+    opponent_count = 0
+    for cell in node.state.values():
+        if cell.color == global_turn:
+            player_count += cell.height
+        else:
+            opponent_count += cell.height
+    return player_count / (player_count + opponent_count)
 
-def max_value(node : Node, alpha, beta):
+def max_value(node : Node, alpha, beta, player_color, global_turn):     #global turn is player that executes minimax (needed for utility) 
     new_alpha = alpha
     if cutoff_test(node):
-        return utility(node)
-    for action in generate_possible_actions(node):
+        return utility(node, global_turn)
+    for action in generate_possible_actions(node, player_color):
         new_node = apply_action(action, node, node.next_turn_color)
-        new_alpha = max(new_alpha, min_value(new_node, new_alpha, beta))
+        next_turn_colour = PlayerColor.BLUE if player_color == PlayerColor.RED else PlayerColor.RED
+        new_alpha = max(new_alpha, min_value(new_node, new_alpha, beta, next_turn_colour, global_turn))
         if new_alpha >= beta:
             return beta
     return new_alpha
 
-def min_value(node : Node, alpha, beta):
+def min_value(node : Node, alpha, beta, player_color, global_turn):
     new_beta = beta
     if cutoff_test(node):
-        return utility(node)
-    for action in generate_possible_actions(node):
+        return utility(node, global_turn)
+    for action in generate_possible_actions(node, player_color):
         new_node = apply_action(action, node, node.next_turn_color)
-        new_beta = min(new_beta, max_value(new_node, alpha, new_beta))
+        next_turn_colour = PlayerColor.BLUE if player_color == PlayerColor.RED else PlayerColor.RED
+        new_beta = min(new_beta, max_value(new_node, alpha, new_beta, next_turn_colour, global_turn))
         if new_beta >= alpha:
             return alpha
     return new_beta
@@ -181,7 +190,8 @@ def minimax_decision(state, color):
     root = Node(state, None, None, 0, color)
     value = {}
     for action in generate_possible_actions(root, color):
-        value[action] = min_value(apply_action(root), -math.inf, math.inf)
+        next_turn_colour = PlayerColor.BLUE if color == PlayerColor.RED else PlayerColor.RED
+        value[action] = min_value(apply_action(action, root, color), -math.inf, math.inf, next_turn_colour, color)
     return max(value, key=value.get)
 
 class Agent:
@@ -303,7 +313,7 @@ class Agent:
                     if isinstance(cell, CellState):
                         self.state[coord] = cell
                     elif cell == 1:
-                        self.state[coord] = CellState(PlayerColor.RED, 1)
+                        self.state[coord] = CellState(color, 1)
 
             case _:
                 raise ValueError(f"Unknown action type: {action}")
@@ -339,16 +349,17 @@ def apply_move(action: MoveAction, node: Node, player_colour) -> Node:
     else:
         new_state[target] = CellState(player_colour, src_cell.height)
 
-    new_node = Node(new_state, node, [], action, node.cost + 1)
-    node.children.append(new_node)
+    next_turn_colour = PlayerColor.BLUE if player_colour == PlayerColor.RED else PlayerColor.RED
+    new_node = Node(new_state, node, action, node.height + 1, next_turn_colour)
     return new_node
 
 def apply_eat(action: EatAction, node: Node, player_colour) -> Node: #prob don't need player_colour here
+
     new_state = copy(node.state)    # not sure if need to copy/deepcopy
     curr_cell = new_state.pop(action.coord)
     new_state[action.coord+action.direction] = curr_cell
-    new_node = Node(new_state, node, [], action, node.cost + 1)
-    node.children.append(new_node)
+    next_turn_colour = PlayerColor.BLUE if player_colour == PlayerColor.RED else PlayerColor.RED
+    new_node = Node(new_state, node, action, node.height + 1, next_turn_colour)
     return new_node
 
 def apply_cascade(action: CascadeAction, node: Node, player_colour) -> Node:
@@ -387,4 +398,5 @@ def apply_cascade(action: CascadeAction, node: Node, player_colour) -> Node:
         elif cell == 1:
             new_state[coord] = CellState(player_colour, 1)
 
-    return Node(state=new_state, parent=node, children=[], action=action, cost = node.cost + 1)
+    next_turn_colour = PlayerColor.BLUE if player_colour == PlayerColor.RED else PlayerColor.RED
+    return Node(state=new_state, parent=node, action=action, height = node.height + 1, next_turn_color = next_turn_colour)
