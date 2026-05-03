@@ -228,13 +228,21 @@ class Agent:
 
         # During placement phase (first 8 turns total, 4 per player)
         if self._turn_count < 4:
-            match self._color:
-                case PlayerColor.RED:
-                    print("Testing: RED is playing a PLACE action")
-                    return PlaceAction(Coord(0, self._turn_count))
-                case PlayerColor.BLUE:
-                    print("Testing: BLUE is playing a PLACE action")
-                    return PlaceAction(Coord(7, self._turn_count))
+            for i in range(1, BOARD_N - 1):
+                for j in range(1, BOARD_N - 1):
+                    if self.state.get(Coord(i,j)):
+                        continue
+                    elif self.state.get(Coord(i,j) + Direction.Down):
+                        continue
+                    elif self.state.get(Coord(i,j) + Direction.Up):
+                        continue
+                    elif self.state.get(Coord(i,j) + Direction.Right):
+                        continue
+                    elif self.state.get(Coord(i,j) + Direction.Left):
+                        continue
+                    else:
+                        return PlaceAction(Coord(i, j))
+
 
         # During play phase
         return minimax_decision(self.state, self._color)
