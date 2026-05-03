@@ -182,7 +182,7 @@ def min_value(node : Node, alpha, beta, player_color, global_turn):
         new_node = apply_action(action, node, node.next_turn_color)
         next_turn_colour = PlayerColor.BLUE if player_color == PlayerColor.RED else PlayerColor.RED
         new_beta = min(new_beta, max_value(new_node, alpha, new_beta, next_turn_colour, global_turn))
-        if new_beta >= alpha:
+        if new_beta <= alpha:
             return alpha
     return new_beta
 
