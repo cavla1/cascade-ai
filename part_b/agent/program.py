@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 import math #Are we allowed to do that?
-import numpy as np
 from copy import copy
 
 from referee.game import PlayerColor, Coord, Direction, \
@@ -194,6 +193,46 @@ def minimax_decision(state, color):
         value[action] = min_value(apply_action(action, root, color), -math.inf, math.inf, next_turn_colour, color)
     return max(value, key=value.get)
 
+def centre_dist(coord: Coord):
+    centres = [Coord(3,3), Coord(3, 4), Coord(4, 3), Coord(4, 4)]
+    return min(abs(coord.c-centre.c) + abs(coord.r-centre.r) for centre in centres)
+
+def place_decision(state, color):
+    best_coord = None
+    best_val = 0
+
+    def score(coord: Coord):
+
+        return 10 - centre_dist(coord)
+
+    for i in range(1, BOARD_N - 1):
+                for j in range(1, BOARD_N - 1):
+                    curr = Coord(i,j)
+                    up = state.get(Coord(i,j) + Direction.Up)
+                    down = state.get(Coord(i,j) + Direction.Down)
+                    left = state.get(Coord(i,j) + Direction.Left)
+                    right = state.get(Coord(i,j) + Direction.Right)
+                    # checking availability
+                    if state.get(curr):
+                        continue
+                    elif up and up.color != color:
+                        continue
+                    elif down and down.color != color:
+                        continue
+                    elif left and left.color != color:
+                        continue
+                    elif right and right.color != color:
+                        continue
+
+                    val = score(curr)
+                    if not best_coord or best_coord and val > best_val:
+                        best_val = val
+                        best_coord = curr
+    return PlaceAction(best_coord)
+                        
+
+                    
+
 class Agent:
     """
     This class is the "entry point" for your agent, providing an interface to
@@ -228,20 +267,7 @@ class Agent:
 
         # During placement phase (first 8 turns total, 4 per player)
         if self._turn_count < 4:
-            for i in range(1, BOARD_N - 1):
-                for j in range(1, BOARD_N - 1):
-                    if self.state.get(Coord(i,j)):
-                        continue
-                    elif self.state.get(Coord(i,j) + Direction.Down):
-                        continue
-                    elif self.state.get(Coord(i,j) + Direction.Up):
-                        continue
-                    elif self.state.get(Coord(i,j) + Direction.Right):
-                        continue
-                    elif self.state.get(Coord(i,j) + Direction.Left):
-                        continue
-                    else:
-                        return PlaceAction(Coord(i, j))
+            return place_decision(self.state, self._color)
 
 
         # During play phase
