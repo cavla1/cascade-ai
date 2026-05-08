@@ -1,7 +1,7 @@
 # COMP30024 Artificial Intelligence, Semester 1 2026
 # Project Part B: Game Playing Agent
 
-from __future__ import annotations
+from __future__ import annotations 
 import math #Are we allowed to do that?
 from copy import copy
 
@@ -146,12 +146,13 @@ def cutoff_test(node):
             no_blues_left = False
         if cell.color == PlayerColor.RED:
             no_reds_left = False
-    if (no_blues_left | no_reds_left | node.height > 2):      #True if terminal state or nodes height is bigger than 5 (to be improved)
+    if (no_blues_left or no_reds_left or node.height > 2):      #True if terminal state or nodes height is bigger than 5 (to be improved)
         return True
     else:
         return False
 
-def utility(node, global_turn):
+
+def ratio(node, global_turn):
     player_count = 0
     opponent_count = 0
     for cell in node.state.values():
@@ -160,6 +161,49 @@ def utility(node, global_turn):
         else:
             opponent_count += cell.height
     return player_count / (player_count + opponent_count)
+
+def close_to_center(node, global_turn):
+    combined_distance = 0
+    for coord in node.state.keys():
+        if node.state[coord].color == global_turn:
+            combined_distance += abs(coord.r - 3.5)
+            combined_distance += abs(coord.c - 3.5)
+    return (84 - combined_distance)/84                  #84 is the highest possible combined distance (12*7), so we get value between 0 and 1
+
+def prefer_high_stacks(node, global_turn):
+    number_of_high_stacks = 0
+    total_stacks = 0
+    for cell in node.state.values():
+        if cell.color == global_turn and cell.height > 2:
+            number_of_high_stacks += 1
+            total_stacks += 1
+        elif cell.color == global_turn:
+            total_stacks += 1
+    return number_of_high_stacks / total_stacks
+
+def minimize_distance_from_lower_stack(node, global_turn):  #tries to minimize the distance from our highest stack to the opponents lowest (if ours is higher)
+    our_stack_height_max = 0
+    our_stack_coord = Coord(0,0)
+    opp_stack_height_min = 0
+    opp_stack_coord = Coord(0,0)
+    for coord in node.state.keys():
+        if node.state[coord].color == global_turn and node.state[coord].height > our_stack_height_max:
+            our_stack_height_max = node.state[coord].height
+            our_stack_coord = coord
+        if node.state[coord].color != global_turn and node.state[coord].height < opp_stack_height_min:
+            opp_stack_height_min = node.state[coord].height
+            opp_stack_coord = coord
+    return (14 - abs(our_stack_coord.c - opp_stack_coord.c) + abs(our_stack_coord.r - opp_stack_coord.c)) / 14
+        
+
+def utility(node, global_turn):
+    ratio_calculated = ratio(node, global_turn)
+    if ratio_calculated == 1:
+        return 10000
+    elif ratio_calculated == 0: 
+        return -10000
+    else:
+        return 100 * ratio_calculated + 50 * prefer_high_stacks(node, global_turn) + 50 * minimize_distance_from_lower_stack(node, global_turn) + 30 * close_to_center(node, global_turn)
 
 def max_value(node : Node, alpha, beta, player_color, global_turn):     #global turn is player that executes minimax (needed for utility) 
     new_alpha = alpha
