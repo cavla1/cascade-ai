@@ -152,6 +152,8 @@ def ratio(node, global_turn): #dan
 
 def num_stacks(node, global_turn): #chris
     stack_count = 0 # playerstacks - opponent stacks
+    player_stacks = 0
+    opponent_stacks = 0
     player_count = 0
     opponent_count = 0
 
@@ -160,18 +162,21 @@ def num_stacks(node, global_turn): #chris
             continue
         if cell.color == global_turn:
             stack_count += 1
+            player_stacks += 1
             player_count += cell.height
         else:
+            opponent_stacks += 1
             opponent_count += cell.height
             stack_count -= 1
     
     total_count = player_count + opponent_count
     
-    # if player has more checkers than opponent, prioritise having more stacks
+    # if player has more checkers than opponent, prioritise having more stacks than opponent
     if player_count >= opponent_count:
-        return (stack_count + opponent_count) / total_count
+        return player_stacks / total_count
     else:
-        return (player_count - stack_count) / total_count
+        return opponent_stacks / total_count
+    
 
 def prefer_high_stacks(node, global_turn): #dan
     number_of_high_stacks = 0
