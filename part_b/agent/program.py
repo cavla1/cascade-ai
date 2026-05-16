@@ -170,12 +170,13 @@ def num_stacks(node, global_turn): #chris
             stack_count -= 1
     
     total_count = player_count + opponent_count
+    total_stacks = player_stacks + opponent_stacks
     
     # if player has more checkers than opponent, prioritise having more stacks than opponent
     if player_count >= opponent_count:
-        return player_stacks / total_count
+        return player_stacks / total_stacks
     else:
-        return opponent_stacks / total_count
+        return opponent_stacks / total_stacks
     
 
 def prefer_high_stacks(node, global_turn): #dan
@@ -263,7 +264,7 @@ def utility(node, global_turn): #chris
     if rat == 0:
         return 0
     #everything normalised from 0-1
-    return 0.5 * rat + 0.25 * distance_metric(node, global_turn) + 0.25 * num_stacks(node, global_turn)
+    return 0.5 * rat + 0.3 * distance_metric(node, global_turn) + 0.2 * num_stacks(node, global_turn)
 
 def utility_dan(node, global_turn): #dan
     ratio_calculated = ratio(node, global_turn)
