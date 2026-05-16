@@ -156,7 +156,7 @@ def num_stacks(node, global_turn): #chris
     opponent_count = 0
 
     for cell in node.state.values():
-        if cell.is_empty():
+        if cell.is_empty:
             continue
         if cell.color == global_turn:
             stack_count += 1
@@ -188,7 +188,7 @@ def distance_metric(node, global_turn): #chris
     player_count = 0
     opponent_count = 0
     for cell in node.state.values():
-        if cell.is_empty():
+        if cell.is_empty:
             continue
         if cell.color == global_turn:
             player_count += cell.height
@@ -215,7 +215,7 @@ def close_to_opponent(node, global_turn): #chris
     opponents = []
 
     for coord, cell in node.state.items():
-        if cell.is_empty():
+        if cell.is_empty:
             continue
         if cell.color == global_turn:
             players.append(coord)
