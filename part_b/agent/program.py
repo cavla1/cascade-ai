@@ -2,23 +2,11 @@
 # Project Part B: Game Playing Agent
 
 from __future__ import annotations 
-import math #Are we allowed to do that?
+import math
 from copy import copy
 
 from referee.game import PlayerColor, Coord, Direction, \
     Action, PlaceAction, MoveAction, EatAction, CascadeAction, CellState, Board, BOARD_N
-"""
-Import ApplyActions - Chris - just copy pasted from last part
-PlaceAction - Chris
-placing logic (towards centre)
-__init__
-action (minimax decision)
-minimax value (max calls min)
-update - Dan
-cutoff/terminal (depth or terminal state)
-utility
-"""
-
 
 # Node class (modified from part A)
 class Node:
@@ -152,7 +140,7 @@ def cutoff_test(node):
         return False
 
 
-def ratio(node, global_turn):
+def ratio(node, global_turn): #dan
     player_count = 0
     opponent_count = 0
     for cell in node.state.values():
@@ -162,15 +150,30 @@ def ratio(node, global_turn):
             opponent_count += cell.height
     return player_count / (player_count + opponent_count)
 
-def close_to_center(node, global_turn):
-    combined_distance = 0
-    for coord in node.state.keys():
-        if node.state[coord].color == global_turn:
-            combined_distance += abs(coord.r - 3.5)
-            combined_distance += abs(coord.c - 3.5)
-    return (84 - combined_distance)/84                  #84 is the highest possible combined distance (12*7), so we get value between 0 and 1
+def num_stacks(node, global_turn): #chris
+    stack_count = 0 # playerstacks - opponent stacks
+    player_count = 0
+    opponent_count = 0
 
-def prefer_high_stacks(node, global_turn):
+    for cell in node.state.values():
+        if cell.is_empty():
+            continue
+        if cell.color == global_turn:
+            stack_count += 1
+            player_count += cell.height
+        else:
+            opponent_count += cell.height
+            stack_count -= 1
+    
+    total_count = player_count + opponent_count
+    
+    # if player has more checkers than opponent, prioritise having more stacks
+    if player_count >= opponent_count:
+        return (stack_count + opponent_count) / total_count
+    else:
+        return (player_count - stack_count) / total_count
+
+def prefer_high_stacks(node, global_turn): #dan
     number_of_high_stacks = 0
     total_stacks = 0
     for cell in node.state.values():
@@ -181,6 +184,59 @@ def prefer_high_stacks(node, global_turn):
             total_stacks += 1
     return number_of_high_stacks / total_stacks
 
+def distance_metric(node, global_turn): #chris
+    player_count = 0
+    opponent_count = 0
+    for cell in node.state.values():
+        if cell.is_empty():
+            continue
+        if cell.color == global_turn:
+            player_count += cell.height
+        else:
+            opponent_count += cell.height
+    if player_count >= opponent_count:
+        return close_to_centre(node, global_turn)
+    else:
+        return close_to_opponent(node, global_turn)
+
+def close_to_centre(node, global_turn): #chris
+    combined_dist = 0
+    stack_count = 0
+    for coord, cell in node.state.items():
+        if node.state[coord].color == global_turn:
+            stack_count += 1
+            combined_dist += centre_dist(coord)
+    max_dist = stack_count * 5  #not actual max but approximation for simpler computation
+    return (max_dist - combined_dist) / max_dist
+
+def close_to_opponent(node, global_turn): #chris
+    combined_short_dist = 0
+    players = []
+    opponents = []
+
+    for coord, cell in node.state.items():
+        if cell.is_empty():
+            continue
+        if cell.color == global_turn:
+            players.append(coord)
+        else:
+            opponents.append(coord)
+    
+    for coord in players:
+        shortest_dist = min(manhattan_dist(coord, opp) for opp in opponents)
+        combined_short_dist += shortest_dist
+    
+    return combined_short_dist / len(players) / 7 # divided by players for averaging then by 7 for normalising
+
+def close_to_center(node, global_turn): #dan
+    combined_distance = 0
+    for coord in node.state.keys():
+        if node.state[coord].color == global_turn:
+            combined_distance += abs(coord.r - 3.5)
+            combined_distance += abs(coord.c - 3.5)
+    return (84 - combined_distance)/84                  #84 is the highest possible combined distance (12*7), so we get value between 0 and 1
+
+#dan
 def minimize_distance_from_lower_stack(node, global_turn):  #tries to minimize the distance from our highest stack to the opponents lowest (if ours is higher)
     our_stack_height_max = 0
     our_stack_coord = Coord(0,0)
@@ -195,8 +251,16 @@ def minimize_distance_from_lower_stack(node, global_turn):  #tries to minimize t
             opp_stack_coord = coord
     return (14 - abs(our_stack_coord.c - opp_stack_coord.c) + abs(our_stack_coord.r - opp_stack_coord.c)) / 14
         
+def utility(node, global_turn): #chris
+    rat = ratio(node, global_turn)
+    if rat == 1:
+        return 1
+    if rat == 0:
+        return 0
+    #everything normalised from 0-1
+    return 0.5 * rat + 0.25 * distance_metric(node, global_turn) + 0.25 * num_stacks(node, global_turn)
 
-def utility(node, global_turn):
+def utility_dan(node, global_turn): #dan
     ratio_calculated = ratio(node, global_turn)
     if ratio_calculated == 1:
         return 10000
@@ -237,9 +301,12 @@ def minimax_decision(state, color):
         value[action] = min_value(apply_action(action, root, color), -math.inf, math.inf, next_turn_colour, color)
     return max(value, key=value.get)
 
+def manhattan_dist(coord1: Coord, coord2: Coord):
+    return abs(coord1.c-coord2.c) + abs(coord1.r - coord2.r)
+
 def centre_dist(coord: Coord):
     centres = [Coord(3,3), Coord(3, 4), Coord(4, 3), Coord(4, 4)]
-    return min(abs(coord.c-centre.c) + abs(coord.r-centre.r) for centre in centres)
+    return min(manhattan_dist(coord, centre) for centre in centres)
 
 def place_decision(state, color):
     best_coord = None
