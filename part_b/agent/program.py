@@ -140,7 +140,7 @@ def cutoff_test(node):
         return False
 
 
-def ratio(node, global_turn): #dan
+def ratio(node, global_turn):
     player_count = 0
     opponent_count = 0
     for cell in node.state.values():
@@ -150,12 +150,11 @@ def ratio(node, global_turn): #dan
             opponent_count += cell.height
     return player_count / (player_count + opponent_count)
 
-def num_stacks(node, global_turn): #chris
+def num_stacks(node, global_turn):
     player_stacks = 0
     opponent_stacks = 0
     player_count = 0
     opponent_count = 0
-    conc = 0
 
     for cell in node.state.values():
         if cell.is_empty:
@@ -163,40 +162,23 @@ def num_stacks(node, global_turn): #chris
         if cell.color == global_turn:
             player_stacks += 1
             player_count += cell.height
-            conc += cell.height * cell.height
         else:
             opponent_stacks += 1
             opponent_count += cell.height
     
-    total_count = player_count + opponent_count
-    total_stacks = player_stacks + opponent_stacks
-
-    A = (player_count - opponent_count) / total_count
-    norm_conc = (conc - player_stacks) / (player_stacks*player_stacks - player_stacks)
-
-    return -A * norm_conc
+    # total_stacks = player_stacks + opponent_stacks
+    avg = player_count / player_stacks
+    norm_avg = (avg - 1) / (player_count - 1)
+    diff = (player_count - opponent_count) / (player_count + opponent_count)
+    return 1 - abs(norm_avg + (diff - 1)/2)
     
-    # # if player has more checkers than opponent, prioritise having more stacks than opponent
-    # if player_count >= opponent_count:
-    #     return player_stacks / total_stacks
-    # else:
-    #     return opponent_stacks / total_stacks
-
-
+    # if player has more checkers than opponent, prioritise having more stacks than opponent
+    if player_count >= opponent_count:
+        return player_stacks / total_stacks
+    elif player_count < opponent_count:
+        return opponent_stacks / total_stacks
     
-
-def prefer_high_stacks(node, global_turn): #dan
-    number_of_high_stacks = 0
-    total_stacks = 0
-    for cell in node.state.values():
-        if cell.color == global_turn and cell.height > 2:
-            number_of_high_stacks += 1
-            total_stacks += 1
-        elif cell.color == global_turn:
-            total_stacks += 1
-    return number_of_high_stacks / total_stacks
-
-def distance_metric(node, global_turn): #chris
+def distance_metric(node, global_turn):
     player_count = 0
     opponent_count = 0
     for cell in node.state.values():
@@ -211,7 +193,7 @@ def distance_metric(node, global_turn): #chris
     else:
         return close_to_opponent(node, global_turn)
 
-def close_to_centre(node, global_turn): #chris
+def close_to_centre(node, global_turn):
     combined_dist = 0
     stack_count = 0
     for coord, cell in node.state.items():
@@ -221,7 +203,7 @@ def close_to_centre(node, global_turn): #chris
     max_dist = stack_count * 5  #not actual max but approximation for simpler computation
     return (max_dist - combined_dist) / max_dist
 
-def close_to_opponent(node, global_turn): #chris
+def close_to_opponent(node, global_turn):
     combined_short_dist = 0
     players = []
     opponents = []
@@ -240,30 +222,7 @@ def close_to_opponent(node, global_turn): #chris
     
     return combined_short_dist / len(players) / 7 # divided by players for averaging then by 7 for normalising
 
-def close_to_center(node, global_turn): #dan
-    combined_distance = 0
-    for coord in node.state.keys():
-        if node.state[coord].color == global_turn:
-            combined_distance += abs(coord.r - 3.5)
-            combined_distance += abs(coord.c - 3.5)
-    return (84 - combined_distance)/84                  #84 is the highest possible combined distance (12*7), so we get value between 0 and 1
-
-#dan
-def minimize_distance_from_lower_stack(node, global_turn):  #tries to minimize the distance from our highest stack to the opponents lowest (if ours is higher)
-    our_stack_height_max = 0
-    our_stack_coord = Coord(0,0)
-    opp_stack_height_min = 0
-    opp_stack_coord = Coord(0,0)
-    for coord in node.state.keys():
-        if node.state[coord].color == global_turn and node.state[coord].height > our_stack_height_max:
-            our_stack_height_max = node.state[coord].height
-            our_stack_coord = coord
-        if node.state[coord].color != global_turn and node.state[coord].height < opp_stack_height_min:
-            opp_stack_height_min = node.state[coord].height
-            opp_stack_coord = coord
-    return (14 - abs(our_stack_coord.c - opp_stack_coord.c) + abs(our_stack_coord.r - opp_stack_coord.c)) / 14
-        
-def utility(node, global_turn): #chris
+def utility(node, global_turn):
     rat = ratio(node, global_turn)
     if rat == 1:
         return 1
@@ -271,15 +230,6 @@ def utility(node, global_turn): #chris
         return 0
     #everything normalised from 0-1
     return 0.5 * rat + 0.3 * distance_metric(node, global_turn) + 0.2 * num_stacks(node, global_turn)
-
-def utility_dan(node, global_turn): #dan
-    ratio_calculated = ratio(node, global_turn)
-    if ratio_calculated == 1:
-        return 10000
-    elif ratio_calculated == 0: 
-        return -10000
-    else:
-        return 100 * ratio_calculated + 50 * prefer_high_stacks(node, global_turn) + 50 * minimize_distance_from_lower_stack(node, global_turn) + 30 * close_to_center(node, global_turn)
 
 def max_value(node : Node, alpha, beta, player_color, global_turn):     #global turn is player that executes minimax (needed for utility) 
     new_alpha = alpha
