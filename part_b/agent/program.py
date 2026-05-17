@@ -172,16 +172,6 @@ def stack_height(node, global_turn):
     
     total_stacks = player_stacks + opponent_stacks
     return useful / total_stacks
-    avg = player_count / player_stacks
-    norm_avg = (avg - 1) / (player_count - 1)
-    diff = (player_count - opponent_count) / (player_count + opponent_count)
-    return 1 - abs(norm_avg + (diff - 1)/2)
-    
-    # if player has more checkers than opponent, prioritise having more stacks than opponent
-    if player_count >= opponent_count:
-        return player_stacks / total_stacks
-    elif player_count < opponent_count:
-        return opponent_stacks / total_stacks
     
 def distance_metric(node, global_turn):
     player_count = 0
@@ -234,7 +224,7 @@ def utility(node, global_turn):
     if rat == 0:
         return 0
     #everything normalised from 0-1
-    return 0.2 * rat + 0.4 * distance_metric(node, global_turn) + 0.4 * stack_height(node, global_turn)
+    return 0.4 * rat + 0.3 * distance_metric(node, global_turn) + 0.3 * stack_height(node, global_turn)
 
 def max_value(node : Node, alpha, beta, player_color, global_turn):     #global turn is player that executes minimax (needed for utility) 
     new_alpha = alpha
