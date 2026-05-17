@@ -156,6 +156,8 @@ def num_stacks(node, global_turn):
     player_count = 0
     opponent_count = 0
     useful = 0
+    usefulness = {1: 0.35, 2: 0.95, 3: 1.00, 4: 0.85, 5: 0.60, 6: 0.40,
+                  7: 0.25, 8: 0.15, 9: 0.15, 10: 0.15, 11: 0.15, 12: 0.15}
 
     for cell in node.state.values():
         if cell.is_empty:
@@ -163,8 +165,7 @@ def num_stacks(node, global_turn):
         if cell.color == global_turn:
             player_stacks += 1
             player_count += cell.height
-            if 2 <= cell.height <= 4:
-                useful += 1
+            useful += usefulness[cell.height]
         else:
             opponent_stacks += 1
             opponent_count += cell.height
