@@ -224,7 +224,7 @@ def utility(node, global_turn):
     if rat == 0:
         return 0
     #everything normalised from 0-1
-    return 0.4 * rat + 0.3 * distance_metric(node, global_turn) + 0.3 * stack_height(node, global_turn)
+    return 0.5 * rat + 0.2 * distance_metric(node, global_turn) + 0.3 * stack_height(node, global_turn)
 
 def max_value(node : Node, alpha, beta, player_color, global_turn):     #global turn is player that executes minimax (needed for utility) 
     new_alpha = alpha
