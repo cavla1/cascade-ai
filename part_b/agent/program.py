@@ -134,7 +134,7 @@ def cutoff_test(node):
             no_blues_left = False
         if cell.color == PlayerColor.RED:
             no_reds_left = False
-    if (no_blues_left or no_reds_left or node.height > 3):      #True if terminal state or nodes height is bigger than 5 (to be improved)
+    if (no_blues_left or no_reds_left or node.height > 4):      #True if terminal state or nodes height is bigger than 5 (to be improved)
         return True
     else:
         return False
