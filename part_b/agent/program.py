@@ -173,6 +173,9 @@ def stack_height(node, global_turn):
     total_stacks = player_stacks + opponent_stacks
     return useful / total_stacks
     
+def edge_dist(node, global_turn):
+    pass
+
 def distance_metric(node, global_turn):
     player_count = 0
     opponent_count = 0
@@ -183,10 +186,10 @@ def distance_metric(node, global_turn):
             player_count += cell.height
         else:
             opponent_count += cell.height
-    if player_count <= opponent_count:
-        return close_to_centre(node, global_turn)
+    if player_count >= opponent_count:
+        return 0.3*close_to_centre(node, global_turn) + 0.7*close_to_opponent(node, global_turn)
     else:
-        return close_to_opponent(node, global_turn)
+        return 0.7*close_to_opponent(node, global_turn) + 0.3*close_to_opponent(node, global_turn)
 
 def close_to_centre(node, global_turn):
     combined_dist = 0
