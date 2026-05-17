@@ -215,10 +215,10 @@ def close_to_opponent(node, global_turn):
             opponents.append(coord)
     
     for coord in players:
-        shortest_dist =  max(manhattan_dist(coord, opp) for opp in opponents)
+        shortest_dist =  min(manhattan_dist(coord, opp) for opp in opponents)
         combined_short_dist += shortest_dist
     
-    return combined_short_dist / len(players) / 7 # divided by players for averaging then by 7 for normalising
+    return (7*len(players) - combined_short_dist) / len(players) / 7 # divided by players for averaging then by 7 for normalising
 
 def utility(node, global_turn):
     rat = ratio(node, global_turn)
