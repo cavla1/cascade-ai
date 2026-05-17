@@ -150,7 +150,7 @@ def ratio(node, global_turn):
             opponent_count += cell.height
     return player_count / (player_count + opponent_count)
 
-def num_stacks(node, global_turn):
+def stack_height(node, global_turn):
     player_stacks = 0
     opponent_stacks = 0
     player_count = 0
@@ -234,7 +234,7 @@ def utility(node, global_turn):
     if rat == 0:
         return 0
     #everything normalised from 0-1
-    return 0.5 * rat + 0.3 * distance_metric(node, global_turn) + 0.2 * num_stacks(node, global_turn)
+    return 0.2 * rat + 0.4 * distance_metric(node, global_turn) + 0.4 * stack_height(node, global_turn)
 
 def max_value(node : Node, alpha, beta, player_color, global_turn):     #global turn is player that executes minimax (needed for utility) 
     new_alpha = alpha
