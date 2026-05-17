@@ -155,6 +155,7 @@ def num_stacks(node, global_turn):
     opponent_stacks = 0
     player_count = 0
     opponent_count = 0
+    useful = 0
 
     for cell in node.state.values():
         if cell.is_empty:
@@ -162,11 +163,14 @@ def num_stacks(node, global_turn):
         if cell.color == global_turn:
             player_stacks += 1
             player_count += cell.height
+            if 2 <= cell.height <= 4:
+                useful += 1
         else:
             opponent_stacks += 1
             opponent_count += cell.height
     
-    # total_stacks = player_stacks + opponent_stacks
+    total_stacks = player_stacks + opponent_stacks
+    return useful / total_stacks
     avg = player_count / player_stacks
     norm_avg = (avg - 1) / (player_count - 1)
     diff = (player_count - opponent_count) / (player_count + opponent_count)
