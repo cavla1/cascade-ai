@@ -164,57 +164,36 @@ def stack_height(node, global_turn):
             continue
         if cell.color == global_turn:
             player_stacks += 1
-            player_count += cell.height
             useful += usefulness[cell.height]
-        else:
-            opponent_stacks += 1
-            opponent_count += cell.height
-            useful -= usefulness[cell.height]
-    
-    # total_stacks = player_stacks + opponent_stacks
+
     return useful / player_stacks
-    
-def edge_dist(node, global_turn):
-    pass
 
 def distance_metric(node, global_turn):
     player_count = 0
     opponent_count = 0
-    for cell in node.state.values():
+    player_coords = []
+    opponent_coords = []
+    for coord, cell in node.state.items():
         if cell.is_empty:
             continue
         if cell.color == global_turn:
             player_count += cell.height
+            player_coords.append(coord)
         else:
             opponent_count += cell.height
+            opponent_coords.append(coord)
     if player_count >= opponent_count:
-        return close_to_opponent(node, global_turn)
+        return close_to_opponent(player_coords, opponent_coords)
     else:
-        return close_to_opponent(node, global_turn)
+        return close_to_centre(player_coords)
 
-def close_to_centre(node, global_turn):
-    combined_dist = 0
-    stack_count = 0
-    for coord, cell in node.state.items():
-        if node.state[coord].color == global_turn:
-            stack_count += 1
-            combined_dist += centre_dist(coord)
-    max_dist = stack_count * 5  #not actual max but approximation for simpler computation
+def close_to_centre(coords: list[Coord]):
+    combined_dist = sum(centre_dist(coord) for coord in coords)
+    max_dist = 5*len(coords)
     return (max_dist - combined_dist) / max_dist
 
-def close_to_opponent(node, global_turn):
-    combined_short_dist = 0
-    players = []
-    opponents = []
-
-    for coord, cell in node.state.items():
-        if cell.is_empty:
-            continue
-        if cell.color == global_turn:
-            players.append(coord)
-        else:
-            opponents.append(coord)
-    
+def close_to_opponent(players, opponents):
+  
     for coord in players:
         shortest_dist =  min(manhattan_dist(coord, opp) for opp in opponents)
         combined_short_dist += shortest_dist
