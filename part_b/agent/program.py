@@ -157,7 +157,7 @@ def stack_height(node, global_turn):
     opponent_count = 0
     useful = 0
     usefulness = {1: 0.35, 2: 0.95, 3: 1.00, 4: 0.85, 5: 0.60, 6: 0.40,
-                  7: 0.25, 8: 0.15, 9: 0.15, 10: 0.15, 11: 0.15, 12: 0.15}
+                  7: 0.25, 8: 0.20, 9: 0.15, 10: 0.10, 11: 0.05, 12: 0.00}
 
     for cell in node.state.values():
         if cell.is_empty:
@@ -169,9 +169,10 @@ def stack_height(node, global_turn):
         else:
             opponent_stacks += 1
             opponent_count += cell.height
+            useful -= usefulness[cell.height]
     
     total_stacks = player_stacks + opponent_stacks
-    return useful / total_stacks
+    return (useful + opponent_stacks) / total_stacks
     
 def edge_dist(node, global_turn):
     pass
