@@ -171,8 +171,8 @@ def stack_height(node, global_turn):
             opponent_count += cell.height
             useful -= usefulness[cell.height]
     
-    total_stacks = player_stacks + opponent_stacks
-    return (useful + opponent_stacks) / total_stacks
+    # total_stacks = player_stacks + opponent_stacks
+    return useful / player_stacks
     
 def edge_dist(node, global_turn):
     pass
