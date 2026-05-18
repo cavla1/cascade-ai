@@ -134,7 +134,7 @@ def cutoff_test(node):
             no_blues_left = False
         if cell.color == PlayerColor.RED:
             no_reds_left = False
-    if (no_blues_left or no_reds_left or node.height > 2):      #True if terminal state or nodes height is bigger than 5 (to be improved)
+    if (no_blues_left or no_reds_left or node.height > 3):
         return True
     else:
         return False
@@ -188,9 +188,9 @@ def distance_metric(node, global_turn):
         else:
             opponent_count += cell.height
     if player_count >= opponent_count:
-        return 0.3*close_to_centre(node, global_turn) + 0.7*close_to_opponent(node, global_turn)
+        return close_to_opponent(node, global_turn)
     else:
-        return 0.7*close_to_opponent(node, global_turn) + 0.3*close_to_opponent(node, global_turn)
+        return close_to_opponent(node, global_turn)
 
 def close_to_centre(node, global_turn):
     combined_dist = 0
