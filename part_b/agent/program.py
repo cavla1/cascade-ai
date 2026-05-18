@@ -193,7 +193,7 @@ def close_to_centre(coords: list[Coord]):
     return (max_dist - combined_dist) / max_dist
 
 def close_to_opponent(players, opponents):
-    combined_short_dist
+    combined_short_dist = 0
     for coord in players:
         shortest_dist =  min(manhattan_dist(coord, opp) for opp in opponents)
         combined_short_dist += shortest_dist
